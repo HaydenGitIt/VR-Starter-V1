@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 782284849982cf646b87b3828773d54c
+timeCreated: 1519040241
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Car 1.prefab
+  uploadId: 787862

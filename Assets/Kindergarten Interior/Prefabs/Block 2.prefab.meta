@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 61e7749fe8b77644d85bdea19a981f03
+timeCreated: 1517935957
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Block 2.prefab
+  uploadId: 787862

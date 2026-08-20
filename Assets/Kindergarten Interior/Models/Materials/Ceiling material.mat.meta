@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 1f637ce9dd5b55c4e89dd283974c5a47
+timeCreated: 1518077628
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/Ceiling material.mat
+  uploadId: 787862

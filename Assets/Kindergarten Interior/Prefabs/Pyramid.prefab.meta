@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 20803a26781400f4a8a7ac8850531438
+timeCreated: 1517908784
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Pyramid.prefab
+  uploadId: 787862

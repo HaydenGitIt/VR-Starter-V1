@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: cfab773ab21bf7243b23eb6353bf1e07
+timeCreated: 1518115066
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Dog.prefab
+  uploadId: 787862

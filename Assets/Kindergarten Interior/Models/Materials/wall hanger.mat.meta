@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 42248f20d6588124091b1fbda6379a67
+timeCreated: 1518020842
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/wall hanger.mat
+  uploadId: 787862

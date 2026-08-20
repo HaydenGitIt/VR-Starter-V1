@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 68bdd9bef997fd341946d419f82a4f0e
+timeCreated: 1517943268
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/clay 2.mat
+  uploadId: 787862

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 6cb16fae174944d45ba30a8cd996a9b8
+timeCreated: 1518111557
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/Books 2.mat
+  uploadId: 787862

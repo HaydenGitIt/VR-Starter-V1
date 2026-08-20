@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 1b24345f7f4f66345b3958f4c95cdd22
+timeCreated: 1518077417
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Pool balls.prefab
+  uploadId: 787862

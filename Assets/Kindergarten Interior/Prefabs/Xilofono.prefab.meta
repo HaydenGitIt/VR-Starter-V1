@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: b183e6275c92d82418ccc314d0aa8b7c
+timeCreated: 1517820862
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Xilofono.prefab
+  uploadId: 787862

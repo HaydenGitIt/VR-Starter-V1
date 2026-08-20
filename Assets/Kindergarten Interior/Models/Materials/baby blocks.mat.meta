@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: a5b71e407c6867c44b5f90a59387ae7c
+timeCreated: 1517935021
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/baby blocks.mat
+  uploadId: 787862

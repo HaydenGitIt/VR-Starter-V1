@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: bf7f65fbe7a16f64ea1b4dbd3a6f8104
+timeCreated: 1517918644
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/black material.mat
+  uploadId: 787862

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: a65183db42a3bfb448ca9a5ffea9af23
+timeCreated: 1519028014
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/Cork Board.mat
+  uploadId: 787862

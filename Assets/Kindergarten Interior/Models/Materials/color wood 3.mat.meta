@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 8bbe5fbaa18c05b4b889384bc9c8bb32
+timeCreated: 1517866807
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/color wood 3.mat
+  uploadId: 787862

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 38f1e45bb63383444ad63ca79f5ba826
+timeCreated: 1518076847
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Window.prefab
+  uploadId: 787862

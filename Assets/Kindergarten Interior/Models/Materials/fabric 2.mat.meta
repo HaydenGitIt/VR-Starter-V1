@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 8f85369a502549348a4c71c77ee17a02
+timeCreated: 1518038319
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/fabric 2.mat
+  uploadId: 787862

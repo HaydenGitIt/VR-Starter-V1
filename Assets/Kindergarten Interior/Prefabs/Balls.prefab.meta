@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: eaff3a6d8131dd74498e6f4ecdba0212
+timeCreated: 1517816449
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Balls.prefab
+  uploadId: 787862

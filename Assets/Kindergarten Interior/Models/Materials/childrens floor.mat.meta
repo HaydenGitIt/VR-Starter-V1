@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 92b3cb48bb6e2f34ca9f3c60a114f973
+timeCreated: 1517932829
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/childrens floor.mat
+  uploadId: 787862

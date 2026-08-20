@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: d70151efc6e137a4abd30bf5fa994a6e
+timeCreated: 1517940530
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Letter B.prefab
+  uploadId: 787862

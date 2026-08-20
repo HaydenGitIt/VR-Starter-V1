@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: fb39daea563444f4591f159c0c7a0128
+timeCreated: 1517857884
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Train.prefab
+  uploadId: 787862

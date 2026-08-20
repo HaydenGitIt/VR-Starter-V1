@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 7511f643c7161ee44be4e18923605b91
+timeCreated: 1518022456
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/mattress.mat
+  uploadId: 787862

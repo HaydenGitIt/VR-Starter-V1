@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2dc59793aba6d0e4f998158717977552
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Scene/LightingData.asset
+  uploadId: 787862

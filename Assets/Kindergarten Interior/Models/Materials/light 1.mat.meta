@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c8abf1392404a8348bbb5cfe4582a384
+timeCreated: 1517941002
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Models/Materials/light 1.mat
+  uploadId: 787862

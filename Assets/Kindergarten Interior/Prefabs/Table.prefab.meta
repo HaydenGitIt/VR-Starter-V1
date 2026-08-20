@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: ca9daf6200b44924294fad0dc142920b
+timeCreated: 1518034898
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 111197
+  packageName: Kindergarten Interior
+  packageVersion: 1.3
+  assetPath: Assets/Kindergarten Interior/Prefabs/Table.prefab
+  uploadId: 787862
