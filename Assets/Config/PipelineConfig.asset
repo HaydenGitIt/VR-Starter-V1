@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c84bf9b1997f7b45bc811abb4c67632, type: 3}
+  m_Name: PipelineConfig
+  m_EditorClassIdentifier: Assembly-CSharp::PipelineConfig
+  serverHost: 127.0.0.1
+  serverPort: 8000
+  conversationPath: /conversation
+  healthPath: /health
+  connectionTimeout: 5
+  speechToTextEngine: whisper
+  speechToTextModel: base.en
+  dialogueEngine: ollama
+  dialogueModel: llama3:8b
+  textToSpeechEngine: kokoro
+  textToSpeechVoice: af_heart
+  captureSampleRate: 16000
+  captureChannels: 1
+  playbackSampleRate: 24000
+  playbackChannels: 1
+  onsetThresholdDb: -50
+  releaseThresholdDb: -55
+  onsetConfirmTime: 0.15
+  hangTime: 0.7
+  preRollTime: 0.3
+  minSpeechLength: 0.4
+  maxUtteranceLength: 30
+  maxTurns: 8
+  strikesAllowed: 3

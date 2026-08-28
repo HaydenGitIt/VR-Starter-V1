@@ -14,13 +14,23 @@ using UnityEngine;
 public class MicLevelDebugDisplay : MonoBehaviour
 {
     [Tooltip("Level in dB that the meter treats as the bottom of its range.")]
-    [SerializeField] private float meterFloorDb = -60f;
+    [SerializeField] private float meterFloorDb = -80f;
 
-    [Tooltip("Draw a marker at this dB value - useful for eyeballing where a " +
-             "speech threshold might sit for step 2.")]
-    [SerializeField] private float candidateThresholdDb = -35f;
+    [Tooltip("Draw a marker at this dB value. If a PipelineConfig is reachable, the onset " +
+             "threshold from that config is used instead, so the meter always shows the " +
+             "value the detector is actually using.")]
+    [SerializeField] private float candidateThresholdDb = -50f;
+
+    private float MarkerDb =>
+        (capture != null && capture.Config != null)
+            ? capture.Config.onsetThresholdDb
+            : candidateThresholdDb;
 
     private MicrophoneCapture capture;
+
+    // Optional - if a detector is present we show its state too.
+    private VoiceActivityDetector detector;
+    private UtteranceRecorder recorder;
 
     // Smoothed value so the bar does not flicker wildly frame to frame.
     private float displayedLevel;
@@ -33,6 +43,11 @@ public class MicLevelDebugDisplay : MonoBehaviour
     private void Awake()
     {
         capture = GetComponent<MicrophoneCapture>();
+
+        // These are optional. In step 1 they do not exist yet; from step 2
+        // onward they do, and we display their state as well.
+        detector = GetComponent<VoiceActivityDetector>();
+        recorder = GetComponent<UtteranceRecorder>();
     }
 
     private void Update()
@@ -84,7 +99,7 @@ public class MicLevelDebugDisplay : MonoBehaviour
         }
 
         // Threshold marker
-        float markerPos = Mathf.InverseLerp(meterFloorDb, 0f, candidateThresholdDb);
+        float markerPos = Mathf.InverseLerp(meterFloorDb, 0f, MarkerDb);
         GUI.DrawTexture(new Rect(x + (markerPos * width) - 1f, y - 4f, 2f, barHeight + 8f), markerTexture);
 
         y += barHeight + 8f;
@@ -94,12 +109,53 @@ public class MicLevelDebugDisplay : MonoBehaviour
         y += 30f;
 
         GUI.Label(new Rect(x, y, width, 24f),
-            $"White marker = {candidateThresholdDb:F0} dB candidate threshold", labelStyle);
+            $"White marker = {MarkerDb:F0} dB candidate threshold", labelStyle);
         y += 30f;
 
         if (GUI.Button(new Rect(x, y, 140f, 30f), "Reset Peak"))
         {
             capture.ResetPeak();
+        }
+
+        if (detector == null) return;
+
+        y += 42f;
+
+        // Colour-code the state so it is readable at a glance while talking.
+        Color stateColor = detector.State switch
+        {
+            VoiceActivityDetector.VadState.Speaking => new Color(0.4f, 1f, 0.5f),
+            VoiceActivityDetector.VadState.Onset    => new Color(1f, 0.9f, 0.4f),
+            VoiceActivityDetector.VadState.Trailing => new Color(1f, 0.65f, 0.3f),
+            VoiceActivityDetector.VadState.Gated    => new Color(1f, 0.4f, 0.4f),
+            _                                       => new Color(0.6f, 0.6f, 0.65f)
+        };
+
+        GUIStyle stateStyle = new GUIStyle(labelStyle)
+        {
+            fontSize = 20,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = stateColor }
+        };
+
+        GUI.Label(new Rect(x, y, width, 28f), $"VAD: {detector.State}", stateStyle);
+        y += 30f;
+
+        if (detector.State == VoiceActivityDetector.VadState.Speaking ||
+            detector.State == VoiceActivityDetector.VadState.Trailing)
+        {
+            GUI.Label(new Rect(x, y, width, 24f),
+                $"Recording: {detector.CurrentUtteranceLength:F2}s", labelStyle);
+        }
+        y += 26f;
+
+        GUI.Label(new Rect(x, y, width, 24f),
+            $"Utterances captured: {detector.UtteranceCount}", labelStyle);
+        y += 30f;
+
+        if (recorder != null && GUI.Button(new Rect(x, y, 200f, 30f), "Open Recordings Folder"))
+        {
+            recorder.RevealFolder();
         }
     }
 

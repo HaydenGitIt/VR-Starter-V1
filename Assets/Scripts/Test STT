@@ -1,0 +1,217 @@
+"""
+test_stt.py
+===========
+
+A standalone test of speech-to-text. No server, no Unity, no network.
+It reads WAV files from a folder and prints what it heard.
+
+WHY THIS EXISTS:
+We are proving one thing at a time. If we built the whole pipeline at once
+and a transcript came back wrong, the cause could be the microphone, the
+voice detection, the file format, the model, the server, or Unity. By
+testing transcription alone against audio we have already listened to, a
+wrong transcript here can only mean the model or its settings.
+
+HOW TO RUN:
+    python test_stt.py
+
+    ...or point it at a specific folder:
+    python test_stt.py "C:\\path\\to\\CapturedUtterances"
+"""
+
+# ---------------------------------------------------------------------
+# IMPORTS
+# "import X" loads a library so we can use it. Libraries are either built
+# into Python (os, sys, time, glob) or installed with pip (faster_whisper).
+# ---------------------------------------------------------------------
+
+import os
+import sys
+import time
+import glob
+
+from faster_whisper import WhisperModel
+
+
+# ---------------------------------------------------------------------
+# SETTINGS
+# Capitals are a Python convention meaning "this is a constant" - a value
+# not meant to change while the program runs.
+# ---------------------------------------------------------------------
+
+# Which model to load. Bigger models are more accurate but slower.
+#   tiny.en    fastest, least accurate
+#   base.en    good starting point
+#   small.en   noticeably better on natural speech
+#   medium.en  better again, slower
+# The ".en" versions are English-only and outperform the multilingual
+# versions of the same size when you only need English.
+MODEL_SIZE = "base.en"
+
+# "cuda" uses the GPU. "cpu" is slower but avoids all CUDA/driver issues.
+# Start with "cuda"; if it fails, switch to "cpu" to confirm the code is
+# correct, then treat the GPU as a separate problem.
+DEVICE = "cuda"
+
+# How numbers are represented during inference.
+#   float16  good default on GPU - fast, minimal accuracy loss
+#   int8     use this on CPU
+COMPUTE_TYPE = "float16"
+
+# Where to look for WAV files if no folder is given on the command line.
+# Unity writes to AppData\LocalLow\<Company>\<Product>\CapturedUtterances
+DEFAULT_FOLDER = os.path.join(
+    os.path.expanduser("~"),
+    "AppData", "LocalLow"
+)
+
+
+def find_default_folder():
+    """
+    Searches LocalLow for a CapturedUtterances folder, so you do not have
+    to type the full path.
+
+    A "function" is a named block of code you can run on demand. "def"
+    defines one; the indented lines below belong to it. The text in triple
+    quotes is a docstring - documentation for whoever reads it next.
+    """
+    # ** means "search all subdirectories, however deep".
+    pattern = os.path.join(DEFAULT_FOLDER, "**", "CapturedUtterances")
+    matches = glob.glob(pattern, recursive=True)
+
+    if matches:
+        # [0] takes the first item. Python counts from 0, not 1.
+        return matches[0]
+
+    return None
+
+
+def load_model():
+    """
+    Loads the Whisper model into memory. The first run downloads it, which
+    takes a minute; after that it is cached locally.
+    """
+    print(f"Loading model '{MODEL_SIZE}' on {DEVICE} ({COMPUTE_TYPE})...")
+
+    start = time.time()
+
+    try:
+        model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
+    except Exception as error:
+        # "except" catches an error instead of letting the program crash,
+        # so we can explain it usefully.
+        print()
+        print("FAILED TO LOAD MODEL")
+        print(f"   {error}")
+        print()
+        print("   If this mentions CUDA, cuBLAS or cuDNN, the GPU libraries")
+        print("   are the problem, not the code. Prove the code works first by")
+        print("   setting DEVICE = 'cpu' and COMPUTE_TYPE = 'int8' near the top")
+        print("   of this file, then sort the GPU out separately.")
+        return None
+
+    elapsed = time.time() - start
+    print(f"Model loaded in {elapsed:.1f}s")
+
+    return model
+
+
+def transcribe_file(model, path):
+    """
+    Transcribes one WAV file and prints the result with timings.
+    """
+    filename = os.path.basename(path)
+
+    start = time.time()
+
+    # transcribe() returns two things: an iterator of segments, and an info
+    # object. Python lets a function return several values at once, unpacked
+    # by writing several names on the left of the "=".
+    segments, info = model.transcribe(
+        path,
+        beam_size=5,          # how many alternatives to weigh; higher is slower but slightly better
+        vad_filter=False,     # our Unity VAD has already trimmed silence, so this is off
+    )
+
+    # faster-whisper is lazy: nothing is actually computed until you loop
+    # over the segments. list() forces that work to happen now, so the
+    # elapsed time below measures real transcription.
+    segment_list = list(segments)
+
+    elapsed = time.time() - start
+
+    # Stitch the segments into one string.
+    text = " ".join(segment.text.strip() for segment in segment_list)
+
+    print()
+    print(f"  {filename}")
+    print(f"   audio length : {info.duration:.2f}s")
+    print(f"   transcribe   : {elapsed:.2f}s")
+
+    # A ratio below 1.0 means faster than real time, which is what we need.
+    if info.duration > 0:
+        ratio = elapsed / info.duration
+        print(f"   speed        : {ratio:.2f}x realtime")
+
+    if text:
+        print(f"   heard        : \"{text}\"")
+    else:
+        print("   heard        : (nothing - silence, or too quiet)")
+
+    return elapsed
+
+
+def main():
+    """
+    Entry point. Finds the audio, loads the model, transcribes everything.
+    """
+    # sys.argv holds command-line arguments. argv[0] is the script name
+    # itself, so argv[1] is the first thing the user typed after it.
+    if len(sys.argv) > 1:
+        folder = sys.argv[1]
+    else:
+        folder = find_default_folder()
+
+    if folder is None or not os.path.isdir(folder):
+        print("Could not find a CapturedUtterances folder.")
+        print("Pass the path directly, e.g.:")
+        print('   python test_stt.py "C:\\Users\\You\\AppData\\LocalLow\\Company\\Product\\CapturedUtterances"')
+        return
+
+    print(f"Looking in: {folder}")
+
+    # sorted() puts them in order, which matches the order you recorded them.
+    wav_files = sorted(glob.glob(os.path.join(folder, "*.wav")))
+
+    if not wav_files:
+        print("No .wav files found in that folder.")
+        print("Run the Unity MicTest scene and speak a few sentences first.")
+        return
+
+    print(f"Found {len(wav_files)} file(s)")
+
+    model = load_model()
+    if model is None:
+        return
+
+    print()
+    print("=" * 60)
+
+    total_time = 0.0
+
+    for path in wav_files:
+        total_time += transcribe_file(model, path)
+
+    print()
+    print("=" * 60)
+    print(f"Transcribed {len(wav_files)} file(s) in {total_time:.2f}s total")
+    print(f"Average: {total_time / len(wav_files):.2f}s per utterance")
+    print()
+    print("For a responsive conversation you want well under 0.5s each.")
+    print("If it is slower than that, try a smaller model or check the GPU is in use.")
+
+
+# This line means "only run main() if this file was executed directly,
+# rather than imported by another file". It is standard Python practice.
+if __name__ == "__main__":
+    main()

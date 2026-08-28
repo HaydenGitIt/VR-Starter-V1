@@ -255,8 +255,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 456965273}
-  - component: {fileID: 456965272}
-  - component: {fileID: 456965271}
+  - component: {fileID: 456965276}
+  - component: {fileID: 456965275}
+  - component: {fileID: 456965278}
+  - component: {fileID: 456965277}
   m_Layer: 0
   m_Name: MicTest
   m_TagString: Untagged
@@ -264,37 +266,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &456965271
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 456965270}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 10a2cdb052a68ed48a3a3b2b6fbeaf07, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MicLevelDebugDisplay
-  meterFloorDb: -80
-  candidateThresholdDb: -45
---- !u!114 &456965272
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 456965270}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc5e6cdfdbf131346a2ef5aa6457fcd0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MicrophoneCapture
-  preferredDeviceKeyword: Oculus
-  fallBackToDefaultDevice: 1
-  sampleRate: 16000
-  ringBufferSeconds: 2
-  captureOnStart: 1
 --- !u!4 &456965273
 Transform:
   m_ObjectHideFlags: 0
@@ -304,12 +275,71 @@ Transform:
   m_GameObject: {fileID: 456965270}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 154.30472, y: -0, z: 124.64367}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &456965275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 456965270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 408785ac3101695469a8b2cf323ae7a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MicLevelDebugDisplay
+  meterFloorDb: -80
+  candidateThresholdDb: -50
+--- !u!114 &456965276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 456965270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d6458cafb74a540be8cf2b42f0b07e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MicrophoneCapture
+  config: {fileID: 11400000, guid: 491e2017ef5dd504b95d0994ac766b81, type: 2}
+  preferredDeviceKeyword: Oculus
+  fallBackToDefaultDevice: 1
+  ringBufferSeconds: 2
+  captureOnStart: 1
+--- !u!114 &456965277
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 456965270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a88f9d862ba64594ab0507ee12e96c97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UtteranceRecorder
+  folderName: CapturedUtterances
+  logFolderOnStart: 1
+--- !u!114 &456965278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 456965270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c4a5bb5c6136344e8210759bfb043ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VoiceActivityDetector
+  config: {fileID: 11400000, guid: 491e2017ef5dd504b95d0994ac766b81, type: 2}
+  listeningEnabled: 1
 --- !u!1 &1853465468
 GameObject:
   m_ObjectHideFlags: 0
