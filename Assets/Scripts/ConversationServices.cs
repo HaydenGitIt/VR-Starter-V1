@@ -61,29 +61,59 @@ public struct TranscriptResult
 /// How the trainee's response was judged. Deliberately named for the
 /// pedagogy rather than for any model's tag vocabulary, so changing the
 /// prompt or the model does not ripple into the game logic.
+///
+/// NOTE: there is no "Escalated" value. The parent has an agitation ceiling
+/// and never gets worse - a poorly handled exchange leaves her agitated and
+/// more withdrawn, rather than angrier. So an exchange either reaches her or
+/// it does not, and failing to reach her is what counts against the trainee.
 /// </summary>
 public enum DeescalationVerdict
 {
-    /// <summary>No verdict could be parsed. Treated as neutral, and logged.</summary>
+    /// <summary>
+    /// No verdict could be parsed from the model output. Logged, but NOT
+    /// counted as a strike - a model formatting glitch must never fail a
+    /// trainee who may have responded perfectly well.
+    /// </summary>
     Unknown,
+
+    /// <summary>The trainee reached her. Progress was made.</summary>
     Deescalated,
-    Neutral,
-    Escalated
+
+    /// <summary>
+    /// The trainee did not reach her. Covers both the merely unhelpful and
+    /// the actively poor, since neither moves her and neither makes her worse.
+    /// </summary>
+    Neutral
 }
 
 /// <summary>
 /// The parent's emotional state, used to drive animation and potentially
 /// voice selection. Kept separate from the verdict: how the parent FEELS is
 /// not the same as how the trainee PERFORMED.
+///
+/// Agitated is the ceiling. There is deliberately no "Angry" state - the
+/// simulation must stay safe for trainees, and a parent who withdraws is
+/// both more realistic and more affecting than one who shouts.
 /// </summary>
 public enum ParentEmotion
 {
     Unknown,
-    Calm,
-    Frustrated,
-    Angry,
+
+    /// <summary>Default state. Tense, clipped, guarded.</summary>
+    Agitated,
+
+    /// <summary>
+    /// Fear or shame has surfaced. NOT a worse state than agitated - a
+    /// different register, and often the turning point. Trainees commonly
+    /// mishandle it by retreating into procedure exactly when warmth is needed.
+    /// </summary>
     Distressed,
-    Softening
+
+    /// <summary>Beginning to accept the trainee is trying.</summary>
+    Softening,
+
+    /// <summary>Resolved, or close to it.</summary>
+    Calm
 }
 
 /// <summary>
@@ -206,15 +236,40 @@ public class ConversationLog
 {
     public readonly List<ConversationTurn> Turns = new List<ConversationTurn>();
 
+    /// <summary>
+    /// Turns that failed to reach her. Reaching the configured limit ends
+    /// the scenario with her disengaging and leaving.
+    /// </summary>
     public int StrikeCount { get; private set; }
+
+    /// <summary>Turns that made genuine progress.</summary>
+    public int ProgressCount { get; private set; }
+
+    /// <summary>
+    /// Turns where the model output could not be parsed. Deliberately kept
+    /// out of the scoring - these represent a technical fault, not trainee
+    /// performance - but tracked so a broken prompt shows up in the data
+    /// rather than silently distorting results.
+    /// </summary>
+    public int UnparsedCount { get; private set; }
 
     public void Record(ConversationTurn turn)
     {
         Turns.Add(turn);
 
-        if (turn.verdict == DeescalationVerdict.Escalated)
+        switch (turn.verdict)
         {
-            StrikeCount++;
+            case DeescalationVerdict.Neutral:
+                StrikeCount++;
+                break;
+
+            case DeescalationVerdict.Deescalated:
+                ProgressCount++;
+                break;
+
+            case DeescalationVerdict.Unknown:
+                UnparsedCount++;
+                break;
         }
     }
 
@@ -222,5 +277,7 @@ public class ConversationLog
     {
         Turns.Clear();
         StrikeCount = 0;
+        ProgressCount = 0;
+        UnparsedCount = 0;
     }
 }

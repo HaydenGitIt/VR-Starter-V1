@@ -104,8 +104,15 @@ public class PipelineConfig : ScriptableObject
     [Tooltip("Maximum turns the trainee gets before the scenario resolves.")]
     public int maxTurns = 8;
 
-    [Tooltip("Number of escalating responses that ends the scenario badly.")]
+    [Tooltip("Number of exchanges that FAIL TO REACH her before she gives up and leaves. " +
+             "Under the current design she never escalates, so a strike is a turn that made " +
+             "no progress - including turns that were actively poor.")]
     public int strikesAllowed = 3;
+
+    [Tooltip("Number of exchanges that genuinely reach her before the scenario resolves well. " +
+             "Balance this against strikesAllowed: too low and the scenario ends before it has " +
+             "taught anything, too high and a competent trainee still runs out of turns.")]
+    public int progressToResolve = 4;
 
     // ---------------------------------------------------------------
     // DERIVED VALUES
