@@ -1,4 +1,5 @@
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// TEST SCAFFOLDING for Section A.
@@ -18,6 +19,14 @@ public class ConnectionTestDisplay : MonoBehaviour
 {
     private ConversationClient client;
 
+    // Optional. Present from Section B onward.
+    private StreamingAudioPlayer player;
+
+    // Optional. Present from Section C onward.
+    private ConversationController controller;
+    private VoiceActivityDetector detector;
+    private MicrophoneCapture microphone;
+
     private string status = "starting...";
     private string lastMel = "";
     private string lastTags = "";
@@ -29,6 +38,10 @@ public class ConnectionTestDisplay : MonoBehaviour
     private void Awake()
     {
         client = GetComponent<ConversationClient>();
+        player = FindInScene<StreamingAudioPlayer>();
+        controller = FindInScene<ConversationController>();
+        detector = FindInScene<VoiceActivityDetector>();
+        microphone = FindInScene<MicrophoneCapture>();
     }
 
     private void OnEnable()
@@ -115,6 +128,39 @@ public class ConnectionTestDisplay : MonoBehaviour
 
         GUI.Label(new Rect(pad, y, width, 60), $"MEL: {lastMel}", label); y += 66;
 
+        if (player != null)
+        {
+            GUI.Label(new Rect(pad, y, width, 24),
+                $"Speaking: {player.IsSpeaking}    buffered: {player.BufferedSeconds:F2}s "
+                + $"({player.BufferedSamples}/{player.BufferCapacitySamples})", bold);
+            y += 30;
+        }
+
+        if (controller != null)
+        {
+            // The loop state and the VAD state should agree: the microphone is
+            // open ONLY while Listening. If VAD is anything but Gated while the
+            // controller says Speaking, the gate has failed and Mel is about to
+            // start transcribing herself.
+            GUI.Label(new Rect(pad, y, width, 26),
+                $"LOOP: {controller.State}", new GUIStyle(bold) { fontSize = 19 });
+            y += 30;
+
+            if (detector != null)
+            {
+                GUI.Label(new Rect(pad, y, width, 24),
+                    $"VAD: {detector.State}    utterances: {detector.UtteranceCount}", label);
+                y += 26;
+            }
+
+            if (microphone != null)
+            {
+                GUI.Label(new Rect(pad, y, width, 24),
+                    $"Mic level: {microphone.CurrentDb:F1} dB    ({microphone.Format})", label);
+                y += 30;
+            }
+        }
+
         if (GUI.Button(new Rect(pad, y, 160, 32), "Begin scenario"))
         {
             client.Begin();
@@ -141,5 +187,20 @@ public class ConnectionTestDisplay : MonoBehaviour
         {
             client.SendText(typed);
         }
+    }
+
+    /// <summary>
+    /// Finds a component in the scene, using whichever API this Unity version
+    /// provides. FindObjectOfType was deprecated in Unity 2023/6 in favour of
+    /// FindFirstObjectByType, and using the old name produces warnings there
+    /// while the new name does not exist on older versions.
+    /// </summary>
+    private static T FindInScene<T>() where T : Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return FindFirstObjectByType<T>();
+#else
+        return FindObjectOfType<T>();
+#endif
     }
 }
