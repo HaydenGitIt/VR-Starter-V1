@@ -164,6 +164,19 @@ public class ConversationController : MonoBehaviour
     }
 
     /// <summary>
+    /// Turns automatic starting on or off.
+    ///
+    /// In the flat test scene the controller starts itself as soon as the
+    /// server answers, which is convenient. In the real scene the
+    /// ScenarioDirector decides, because the trainee needs a moment to arrive
+    /// in the room before an agitated parent starts talking at them.
+    /// </summary>
+    public void SetAutoBegin(bool value)
+    {
+        beginOnReady = value;
+    }
+
+    /// <summary>
     /// Starts the scenario. Mel speaks first, so the microphone stays closed
     /// until her opening line has finished playing.
     /// </summary>
