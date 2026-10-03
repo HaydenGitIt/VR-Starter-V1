@@ -52,7 +52,14 @@ speech_to_text:
   compute_type: float16 # "int8" on CPU
 
 dialogue:
-  engine: fake
+  engine: ollama
+  model: llama3:8b
+  prompt: prompts/parent_system_prompt.txt
+  temperature: 0.8          # 0.8 measured at 100% format compliance on llama3:8b
+  # Hard cap on reply length. At 90, llama3 gave 4-5 sentence replies (~9s
+  # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.
+  max_tokens: 55
+  tag_deadline_chars: 60    # no valid tags by now -> reject and retry
 
 text_to_speech:
   engine: fake

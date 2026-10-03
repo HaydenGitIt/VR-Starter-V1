@@ -43,6 +43,26 @@ The first start downloads the Whisper model (~150 MB for `base.en`) to
 `~/.cache/huggingface`. If CUDA gives trouble, set `device: cpu` and
 `compute_type: int8` under `speech_to_text` in `config.local.yaml`.
 
+### Dialogue model
+
+Needs [Ollama](https://ollama.com) running, with the model pulled
+(`ollama pull llama3:8b`). Mel's persona and the verdict rubric live in
+`prompts/parent_system_prompt.txt` — edit it freely, no code changes needed.
+To use a different model on one machine, put this in `config.local.yaml`:
+
+```yaml
+dialogue:
+  model: qwen2.5:3b
+```
+
+Before trusting a new model or prompt, check its tag format and verdicts
+against known-correct answers (it uses the configured model unless told
+otherwise):
+
+```bash
+.venv\Scripts\python check_dialogue.py --model llama3:8b
+```
+
 ### Sending recorded speech
 
 Typed lines on the test page skip speech recognition. To exercise it,

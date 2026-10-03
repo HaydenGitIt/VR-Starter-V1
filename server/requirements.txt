@@ -3,6 +3,7 @@ uvicorn[standard]
 pyyaml
 numpy
 faster-whisper
+ollama
 # CUDA libraries for faster-whisper (found automatically, see engines/stt.py).
 nvidia-cublas-cu12
 nvidia-cudnn-cu12==9.*
