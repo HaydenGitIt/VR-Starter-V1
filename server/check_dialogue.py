@@ -9,7 +9,6 @@ Disagreements mean the model, the prompt, or the expectation is wrong.
 """
 
 import argparse
-import dataclasses
 import time
 
 from app import config
@@ -53,11 +52,9 @@ def main() -> None:
     parser.add_argument("--model", help="override the configured model")
     args = parser.parse_args()
 
-    settings = config.load()
+    engine_name = config.load().dialogue.engine
+    settings = config.load([f"dialogue.{engine_name}.model={args.model}"] if args.model else [])
     engine_settings = settings.dialogue
-    if args.model:
-        engine_settings = dataclasses.replace(
-            engine_settings, options={**engine_settings.options, "model": args.model})
     engine = dialogue.build(engine_settings)
     print(f"Warming {engine_settings.engine} {engine_settings.options.get('model', '')}...")
     engine.warm_up()

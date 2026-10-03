@@ -52,7 +52,8 @@ To use a different model on one machine, put this in `config.local.yaml`:
 
 ```yaml
 dialogue:
-  model: qwen2.5:3b
+  ollama:
+    model: qwen2.5:3b
 ```
 
 Before trusting a new model or prompt, check its tag format and verdicts
@@ -80,10 +81,20 @@ uv pip install --python .venv -r requirements-dev.txt
 .venv\Scripts\python -m pytest
 ```
 
-### Per-machine overrides
+### Switching models and settings
 
-Create `server/config.local.yaml` (gitignored) and list only the keys you
-want to change. It is merged over `config.yaml` at startup.
+Three layers, each overriding the one before:
+
+1. `config.yaml` — the shared defaults (committed).
+2. `config.local.yaml` — this machine's defaults (gitignored). List only
+   the keys you want to change.
+3. `--set section.key=value` — this run only, repeatable:
+
+```bash
+.venv\Scripts\python -m app.main --set dialogue.ollama.model=qwen2.5:3b
+.venv\Scripts\python -m app.main --set dialogue.ollama.model=llama3:8b --set speech_to_text.whisper.model=small.en
+.venv\Scripts\python -m app.main --set dialogue.engine=fake --set text_to_speech.engine=fake
+```
 
 Configuration (engine selection, models, ports, VAD thresholds, scenario
 rules) lives in `server/config.yaml`, mirroring the fields in

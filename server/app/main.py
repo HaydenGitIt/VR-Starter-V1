@@ -1,5 +1,6 @@
 """HTTP and WebSocket entry point. Run with: python -m app.main"""
 
+import argparse
 import asyncio
 import contextlib
 import json
@@ -18,7 +19,23 @@ from app.engines import dialogue, stt, tts
 
 _WEB_DIR = pathlib.Path(__file__).resolve().parent.parent / "web"
 
-settings = config.load()
+
+
+def _parse_args() -> list[str]:
+    """Reads --set overrides from the command line.
+
+    Returns:
+        The override strings, in order.
+    """
+    parser = argparse.ArgumentParser(description="De-escalation conversation server.")
+    parser.add_argument(
+        "--set", action="append", default=[], metavar="SECTION.KEY=VALUE",
+        help="override a config value for this run, e.g. dialogue.ollama.model=qwen2.5:3b")
+    return parser.parse_args().set
+
+
+# Only read the command line when run as the server, not when imported.
+settings = config.load(_parse_args() if __name__ == "__main__" else ())
 speech_to_text = stt.build(settings.speech_to_text)
 dialogue_engine = dialogue.build(settings.dialogue)
 text_to_speech = tts.build(settings.text_to_speech)

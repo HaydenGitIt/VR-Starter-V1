@@ -42,24 +42,27 @@ scenario:
   # she said.
   drop_truncated_fragment: true
 
-# Each engine section is `engine: <name>` plus any options, which are passed
-# straight to that engine's constructor. `fake` engines need no models and
-# exist for testing the protocol without loading any models.
+# Each engine section names the engine to use, then holds an options block
+# per engine (passed to that engine's constructor). Switching `engine:`
+# picks a different block, so engines never see each other's options.
+# `fake` engines need no models; they exist for testing the protocol.
 speech_to_text:
   engine: whisper
-  model: base.en
-  device: cuda          # "cpu" if CUDA gives trouble
-  compute_type: float16 # "int8" on CPU
+  whisper:
+    model: base.en
+    device: cuda          # "cpu" if CUDA gives trouble
+    compute_type: float16 # "int8" on CPU
 
 dialogue:
   engine: ollama
-  model: llama3:8b
-  prompt: prompts/parent_system_prompt.txt
-  temperature: 0.8          # 0.8 measured at 100% format compliance on llama3:8b
-  # Hard cap on reply length. At 90, llama3 gave 4-5 sentence replies (~9s
-  # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.
-  max_tokens: 55
-  tag_deadline_chars: 60    # no valid tags by now -> reject and retry
+  ollama:
+    model: llama3:8b
+    prompt: prompts/parent_system_prompt.txt
+    temperature: 0.8          # 0.8 measured at 100% format compliance on llama3:8b
+    # Hard cap on reply length. At 90, llama3 gave 4-5 sentence replies (~9s
+    # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.
+    max_tokens: 55
+    tag_deadline_chars: 60    # no valid tags by now -> reject and retry
 
 text_to_speech:
   engine: fake

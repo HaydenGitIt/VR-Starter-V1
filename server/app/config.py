@@ -2,6 +2,7 @@
 
 import dataclasses
 import pathlib
+from collections.abc import Sequence
 from typing import Any
 
 import yaml
@@ -13,11 +14,11 @@ _LOCAL_FILE = _SERVER_DIR / "config.local.yaml"
 
 @dataclasses.dataclass(frozen=True)
 class EngineSettings:
-    """One engine config section.
+    """The engine chosen in one config section, with its options.
 
     Attributes:
         engine: Registry name of the engine, e.g. "fake".
-        options: The rest of the section, passed to the engine's constructor.
+        options: That engine's options block, passed to its constructor.
     """
 
     engine: str
@@ -86,15 +87,31 @@ class Settings:
     text_to_speech: EngineSettings
 
 
-def load() -> Settings:
+def load(overrides: Sequence[str] = ()) -> Settings:
     """Reads the config files into a Settings object.
+
+    Args:
+        overrides: "section.key=value" strings applied last, e.g.
+            "dialogue.model=qwen2.5:3b". Values are parsed as YAML.
 
     Returns:
         The merged settings.
+
+    Raises:
+        ValueError: If an override is not of the form key=value.
     """
     raw = _read(_BASE_FILE)
     if _LOCAL_FILE.exists():
         raw = _merge(raw, _read(_LOCAL_FILE))
+    for override in overrides:
+        path, sep, value = override.partition("=")
+        if not sep:
+            raise ValueError(f"Expected section.key=value, got {override!r}.")
+        *sections, key = path.split(".")
+        node = raw
+        for section in sections:
+            node = node.setdefault(section, {})
+        node[key] = yaml.safe_load(value)
 
     return Settings(
         host=raw["server"]["host"],
@@ -110,16 +127,17 @@ def load() -> Settings:
 
 
 def _engine(section: dict[str, Any]) -> EngineSettings:
-    """Splits an engine section into its name and constructor options.
+    """Picks the chosen engine and its options block from a section.
 
     Args:
-        section: A config section with an "engine" key.
+        section: A config section with an "engine" key and an optional
+            options block named after each engine.
 
     Returns:
         The engine settings.
     """
-    options = dict(section)
-    return EngineSettings(engine=options.pop("engine"), options=options)
+    engine = section["engine"]
+    return EngineSettings(engine=engine, options=dict(section.get(engine) or {}))
 
 
 def _read(path: pathlib.Path) -> dict[str, Any]:
