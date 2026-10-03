@@ -39,6 +39,20 @@ uv pip install --python .venv -r requirements.txt
 # then open http://localhost:8000 for the test page
 ```
 
+The first start downloads the Whisper model (~150 MB for `base.en`) to
+`~/.cache/huggingface`. If CUDA gives trouble, set `device: cpu` and
+`compute_type: int8` under `speech_to_text` in `config.local.yaml`.
+
+### Sending recorded speech
+
+Typed lines on the test page skip speech recognition. To exercise it,
+send 16-bit mono 16 kHz WAVs (e.g. from Unity's `CapturedUtterances`
+folder) to a running server:
+
+```bash
+.venv\Scripts\python send_wav.py path\to\utterance.wav
+```
+
 ### Tests
 
 ```bash

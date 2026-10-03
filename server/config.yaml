@@ -21,9 +21,12 @@ scenario:
 
 # Each engine section is `engine: <name>` plus any options, which are passed
 # straight to that engine's constructor. `fake` engines need no models and
-# exist for testing the protocol; real engines are added in later steps.
+# exist for testing the protocol without loading any models.
 speech_to_text:
-  engine: fake
+  engine: whisper
+  model: base.en
+  device: cuda          # "cpu" if CUDA gives trouble
+  compute_type: float16 # "int8" on CPU
 
 dialogue:
   engine: fake
