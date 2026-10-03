@@ -1,0 +1,19 @@
+# Server settings. Field names mirror Assets/Config/PipelineConfig.asset so
+# the two are easy to compare - they are kept in sync by hand.
+#
+# Machine-specific changes (e.g. a smaller model on a dev PC) go in
+# config.local.yaml next to this file. It is gitignored and merged on top
+# of this one, so you only list the keys you want to change.
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+audio:
+  capture_sample_rate: 16000
+  playback_sample_rate: 24000
+
+scenario:
+  max_turns: 8
+  strikes_allowed: 3
+  progress_to_resolve: 4
