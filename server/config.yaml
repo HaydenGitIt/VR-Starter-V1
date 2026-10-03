@@ -17,3 +17,16 @@ scenario:
   max_turns: 8
   strikes_allowed: 3
   progress_to_resolve: 4
+  opening_line: "What is this about? I had to leave work early for this."
+
+# Each engine section is `engine: <name>` plus any options, which are passed
+# straight to that engine's constructor. `fake` engines need no models and
+# exist for testing the protocol; real engines are added in later steps.
+speech_to_text:
+  engine: fake
+
+dialogue:
+  engine: fake
+
+text_to_speech:
+  engine: fake

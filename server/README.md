@@ -39,6 +39,13 @@ uv pip install --python .venv -r requirements.txt
 # then open http://localhost:8000/health in a browser
 ```
 
+### Tests
+
+```bash
+uv pip install --python .venv -r requirements-dev.txt
+.venv\Scripts\python -m pytest
+```
+
 ### Per-machine overrides
 
 Create `server/config.local.yaml` (gitignored) and list only the keys you

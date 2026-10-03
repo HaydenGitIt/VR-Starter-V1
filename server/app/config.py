@@ -12,6 +12,19 @@ _LOCAL_FILE = _SERVER_DIR / "config.local.yaml"
 
 
 @dataclasses.dataclass(frozen=True)
+class EngineSettings:
+    """One engine config section.
+
+    Attributes:
+        engine: Registry name of the engine, e.g. "fake".
+        options: The rest of the section, passed to the engine's constructor.
+    """
+
+    engine: str
+    options: dict[str, Any]
+
+
+@dataclasses.dataclass(frozen=True)
 class Settings:
     """Typed view of the config file.
 
@@ -23,6 +36,10 @@ class Settings:
         max_turns: Trainee turns before the scenario ends.
         strikes_allowed: Turns that fail to reach her before she leaves.
         progress_to_resolve: Turns that reach her before it resolves.
+        opening_line: What the parent says when the scenario begins.
+        speech_to_text: Which STT engine to use.
+        dialogue: Which dialogue engine to use.
+        text_to_speech: Which TTS engine to use.
     """
 
     host: str
@@ -32,6 +49,10 @@ class Settings:
     max_turns: int
     strikes_allowed: int
     progress_to_resolve: int
+    opening_line: str
+    speech_to_text: EngineSettings
+    dialogue: EngineSettings
+    text_to_speech: EngineSettings
 
 
 def load() -> Settings:
@@ -52,7 +73,24 @@ def load() -> Settings:
         max_turns=raw["scenario"]["max_turns"],
         strikes_allowed=raw["scenario"]["strikes_allowed"],
         progress_to_resolve=raw["scenario"]["progress_to_resolve"],
+        opening_line=raw["scenario"]["opening_line"],
+        speech_to_text=_engine(raw["speech_to_text"]),
+        dialogue=_engine(raw["dialogue"]),
+        text_to_speech=_engine(raw["text_to_speech"]),
     )
+
+
+def _engine(section: dict[str, Any]) -> EngineSettings:
+    """Splits an engine section into its name and constructor options.
+
+    Args:
+        section: A config section with an "engine" key.
+
+    Returns:
+        The engine settings.
+    """
+    options = dict(section)
+    return EngineSettings(engine=options.pop("engine"), options=options)
 
 
 def _read(path: pathlib.Path) -> dict[str, Any]:

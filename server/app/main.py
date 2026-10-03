@@ -1,14 +1,53 @@
 """HTTP and WebSocket entry point. Run with: python -m app.main"""
 
+import asyncio
+import contextlib
+import json
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import fastapi
 import uvicorn
 
-from app import config
+from app import config, session
+from app.engines import dialogue, stt, tts
 
 settings = config.load()
-app = fastapi.FastAPI()
+speech_to_text = stt.build(settings.speech_to_text)
+dialogue_engine = dialogue.build(settings.dialogue)
+text_to_speech = tts.build(settings.text_to_speech)
+engines_ready = asyncio.Event()
+
+
+def _warm_up() -> None:
+    """Loads every engine's models. Blocking; run in a thread."""
+    speech_to_text.warm_up()
+    dialogue_engine.warm_up()
+    text_to_speech.warm_up()
+
+
+@contextlib.asynccontextmanager
+async def lifespan(_: fastapi.FastAPI) -> AsyncIterator[None]:
+    """Warms the engines in the background so /health can answer meanwhile.
+
+    Args:
+        _: The app (unused).
+
+    Yields:
+        Control to the running server.
+    """
+
+    async def warm() -> None:
+        await asyncio.to_thread(_warm_up)
+        engines_ready.set()
+        print("Ready.", flush=True)
+
+    task = asyncio.create_task(warm())
+    yield
+    task.cancel()
+
+
+app = fastapi.FastAPI(lifespan=lifespan)
 
 
 @app.get("/health")
@@ -19,10 +58,58 @@ def health() -> dict[str, Any]:
         The health payload.
     """
     return {
-        "ready": True,
+        "ready": engines_ready.is_set(),
         "capture": _audio_format(settings.capture_sample_rate),
         "playback": _audio_format(settings.playback_sample_rate),
     }
+
+
+@app.websocket("/conversation")
+async def conversation(websocket: fastapi.WebSocket) -> None:
+    """Runs one scenario session over a WebSocket.
+
+    Args:
+        websocket: The client connection.
+    """
+    await websocket.accept()
+    await engines_ready.wait()
+    scenario = session.ScenarioSession(
+        settings, speech_to_text, dialogue_engine, text_to_speech)
+    await websocket.send_json(scenario.ready_message())
+
+    while True:
+        frame = await websocket.receive()
+        if frame["type"] == "websocket.disconnect":
+            return
+        try:
+            if frame.get("bytes") is not None:
+                messages = scenario.handle_audio(frame["bytes"])
+            else:
+                messages = scenario.handle_command(json.loads(frame["text"]))
+            await _send_all(websocket, messages)
+        except fastapi.WebSocketDisconnect:
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            await websocket.send_json({"type": "error", "message": str(e)})
+
+
+async def _send_all(
+    websocket: fastapi.WebSocket, messages: Iterator[session.Message]
+) -> None:
+    """Sends a handler's messages as they are produced.
+
+    Each step of the generator runs in a thread, because producing a
+    message may mean a blocking engine call.
+
+    Args:
+        websocket: The client connection.
+        messages: Output of a ScenarioSession handler.
+    """
+    while (message := await asyncio.to_thread(next, messages, None)) is not None:
+        if isinstance(message, bytes):
+            await websocket.send_bytes(message)
+        else:
+            await websocket.send_json(message)
 
 
 def _audio_format(sample_rate: int) -> dict[str, Any]:
