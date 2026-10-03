@@ -32,6 +32,8 @@ def test_conversation_over_websocket(monkeypatch: pytest.MonkeyPatch) -> None:
                         types.append("audio")
                 else:
                     assert frame["text"].startswith("{")
-                    types.append(json.loads(frame["text"])["type"])
+                    message = json.loads(frame["text"])
+                    assert message["type"] != "error", message
+                    types.append(message["type"])
 
-    assert types == ["tags", "reply", "turn_complete", "audio", "turn_end"]
+    assert types == ["tags", "audio", "reply", "turn_complete", "turn_end"]

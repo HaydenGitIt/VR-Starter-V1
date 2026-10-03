@@ -1,58 +1,79 @@
-"""Dialogue engines: write the parent's line and judge the trainee's."""
+"""Dialogue engines: write Mel's line and judge the trainee's."""
 
 import abc
 import dataclasses
+import re
+from collections.abc import Generator
 
 from app import config
 
 
+class MalformedReply(Exception):
+    """The model did not produce valid tags, so the reply cannot be trusted."""
+
+
 @dataclasses.dataclass(frozen=True)
 class Reply:
-    """One parent response.
+    """One of Mel's replies, with tags known before any text exists.
 
     Attributes:
-        verdict: "deescalated", "neutral", or "unknown" if it could not be
-            parsed (an unknown verdict is never counted against the trainee).
+        verdict: "deescalated" (they reached her) or "neutral" (they did not).
         emotion: "agitated", "distressed", "softening" or "calm".
-        text: The parent's spoken line.
+        text: Mel's spoken line, streamed in pieces as it is generated.
+            Close it to stop generation early.
     """
 
     verdict: str
     emotion: str
-    text: str
+    text: Generator[str, None, None]
 
 
 class Dialogue(abc.ABC):
-    """Generates the parent's reply to the conversation so far."""
+    """Generates Mel's reply to the conversation so far."""
 
     def warm_up(self) -> None:
         """Loads models. Called once before the server reports ready."""
 
     @abc.abstractmethod
-    def reply(self, history: list[dict[str, str]]) -> Reply:
-        """Responds to the trainee's latest line.
+    def generate(self, history: list[dict[str, str]]) -> Reply:
+        """Starts Mel's reply to the trainee's latest line.
 
         Args:
             history: Chat messages, oldest first, each with "role" ("user"
-                for the trainee, "assistant" for the parent) and "content".
-                The last message is the trainee's.
+                for the trainee, "assistant" for Mel) and "content". Mel's
+                messages include their tags, e.g. "<neutral><agitated>...".
 
         Returns:
-            The parent's reply.
+            The reply, once its tags are known.
+
+        Raises:
+            MalformedReply: If valid tags do not arrive.
         """
 
 
 class FakeDialogue(Dialogue):
-    """Rewards lines containing an empathetic keyword. No model needed."""
+    """Rewards lines containing an empathetic phrase. No model needed."""
 
-    _KEYWORDS = ("sorry", "understand", "hear you")
+    _PHRASES = ("sorry", "hear you", "listening")
 
-    def reply(self, history: list[dict[str, str]]) -> Reply:
+    def generate(self, history: list[dict[str, str]]) -> Reply:
         """See base class."""
         line = history[-1]["content"]
-        if any(word in line.lower() for word in self._KEYWORDS):
-            return Reply("deescalated", "softening", "Okay. Thank you for saying that.")
-        return Reply("neutral", "agitated", f'"{line}" That doesn\'t help.')
+        if any(phrase in line.lower() for phrase in self._PHRASES):
+            return Reply("deescalated", "softening", _words("Okay. Thank you for saying that."))
+        return Reply("neutral", "agitated", _words(f'"{line}" That doesn\'t help.'))
+
+
+def _words(text: str) -> Generator[str, None, None]:
+    """Streams text a word at a time, the way a model would.
+
+    Args:
+        text: The full line.
+
+    Yields:
+        The line in word-sized pieces.
+    """
+    yield from re.findall(r"\S+\s*", text)
 
 
 _ENGINES: dict[str, type[Dialogue]] = {

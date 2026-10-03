@@ -25,6 +25,41 @@ class EngineSettings:
 
 
 @dataclasses.dataclass(frozen=True)
+class Scenario:
+    """Scenario rules and Mel's fixed lines. See config.yaml for each field."""
+
+    max_turns: int
+    strikes_allowed: int
+    progress_to_resolve: int
+    speak_reply_on_failure: bool
+    speak_reply_on_success: bool
+    start_token: str
+    opening_line: str
+    opening_verdict: str
+    opening_emotion: str
+    fallback_line: str
+    fallback_verdict: str
+    fallback_emotion: str
+    max_retries: int
+    drop_truncated_fragment: bool
+
+    def __post_init__(self) -> None:
+        """Rejects rules that make the scenario impossible to pass.
+
+        Raises:
+            ValueError: If the thresholds cannot all be satisfied.
+        """
+        if self.strikes_allowed < 1 or self.progress_to_resolve < 1:
+            raise ValueError("strikes_allowed and progress_to_resolve must be at least 1.")
+        # A trainee using every allowed miss still needs turns left to succeed.
+        needed = self.progress_to_resolve + self.strikes_allowed - 1
+        if needed > self.max_turns:
+            raise ValueError(
+                f"Using all {self.strikes_allowed - 1} allowed misses, a trainee needs "
+                f"{needed} turns to succeed, but max_turns is {self.max_turns}.")
+
+
+@dataclasses.dataclass(frozen=True)
 class Settings:
     """Typed view of the config file.
 
@@ -33,10 +68,8 @@ class Settings:
         port: Port the server listens on.
         capture_sample_rate: Rate of incoming trainee audio, in Hz.
         playback_sample_rate: Rate of outgoing synthesised audio, in Hz.
-        max_turns: Trainee turns before the scenario ends.
-        strikes_allowed: Turns that fail to reach her before she leaves.
-        progress_to_resolve: Turns that reach her before it resolves.
-        opening_line: What the parent says when the scenario begins.
+        sentence_gap_ms: Silence inserted between spoken sentences.
+        scenario: Scenario rules and fixed lines.
         speech_to_text: Which STT engine to use.
         dialogue: Which dialogue engine to use.
         text_to_speech: Which TTS engine to use.
@@ -46,10 +79,8 @@ class Settings:
     port: int
     capture_sample_rate: int
     playback_sample_rate: int
-    max_turns: int
-    strikes_allowed: int
-    progress_to_resolve: int
-    opening_line: str
+    sentence_gap_ms: int
+    scenario: Scenario
     speech_to_text: EngineSettings
     dialogue: EngineSettings
     text_to_speech: EngineSettings
@@ -70,10 +101,8 @@ def load() -> Settings:
         port=raw["server"]["port"],
         capture_sample_rate=raw["audio"]["capture_sample_rate"],
         playback_sample_rate=raw["audio"]["playback_sample_rate"],
-        max_turns=raw["scenario"]["max_turns"],
-        strikes_allowed=raw["scenario"]["strikes_allowed"],
-        progress_to_resolve=raw["scenario"]["progress_to_resolve"],
-        opening_line=raw["scenario"]["opening_line"],
+        sentence_gap_ms=raw["audio"]["sentence_gap_ms"],
+        scenario=Scenario(**raw["scenario"]),
         speech_to_text=_engine(raw["speech_to_text"]),
         dialogue=_engine(raw["dialogue"]),
         text_to_speech=_engine(raw["text_to_speech"]),

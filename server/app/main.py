@@ -4,10 +4,12 @@ import asyncio
 import contextlib
 import json
 import pathlib
+import traceback
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import fastapi
+import numpy as np
 import uvicorn
 from fastapi import staticfiles
 
@@ -23,11 +25,17 @@ text_to_speech = tts.build(settings.text_to_speech)
 engines_ready = asyncio.Event()
 
 
-def _warm_up() -> None:
-    """Loads every engine's models. Blocking; run in a thread."""
+def _warm_up() -> np.ndarray:
+    """Loads every engine's models. Blocking; run in a thread.
+
+    Returns:
+        The opening line, synthesised once and reused by every session so
+        the scenario starts the instant the trainee is ready.
+    """
     speech_to_text.warm_up()
     dialogue_engine.warm_up()
     text_to_speech.warm_up()
+    return text_to_speech.synthesise(settings.scenario.opening_line)
 
 
 @contextlib.asynccontextmanager
@@ -42,7 +50,13 @@ async def lifespan(_: fastapi.FastAPI) -> AsyncIterator[None]:
     """
 
     async def warm() -> None:
-        await asyncio.to_thread(_warm_up)
+        try:
+            app.state.opening_audio = await asyncio.to_thread(_warm_up)
+        except Exception:  # pylint: disable=broad-except
+            # Otherwise the failure is silent and /health stays not-ready.
+            traceback.print_exc()
+            print("Warm-up FAILED; the server will never report ready.", flush=True)
+            return
         engines_ready.set()
         print("Ready.", flush=True)
 
@@ -78,7 +92,8 @@ async def conversation(websocket: fastapi.WebSocket) -> None:
     await websocket.accept()
     await engines_ready.wait()
     scenario = session.ScenarioSession(
-        settings, speech_to_text, dialogue_engine, text_to_speech)
+        settings, speech_to_text, dialogue_engine, text_to_speech,
+        websocket.app.state.opening_audio)
     await websocket.send_json(scenario.ready_message())
 
     while True:

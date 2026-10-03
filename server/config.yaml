@@ -12,12 +12,35 @@ server:
 audio:
   capture_sample_rate: 16000
   playback_sample_rate: 24000
+  sentence_gap_ms: 90           # silence between spoken sentences
 
+# Values and reasoning carried over from the original DeescalationServer.
 scenario:
   max_turns: 8
-  strikes_allowed: 3
-  progress_to_resolve: 4
-  opening_line: "What is this about? I had to leave work early for this."
+  strikes_allowed: 3            # turns that fail to reach her before she leaves
+  # Main teaching dial. 4 ended the scenario in four turns, too short to
+  # teach anything. progress + (strikes - 1) must be <= max_turns.
+  progress_to_resolve: 6
+  # Whether Mel's last line is spoken before the ending Timeline. On a third
+  # strike it is cut before any audio exists; on success she finishes.
+  # Running out of turns always lets her finish (the turn is already spoken).
+  speak_reply_on_failure: false
+  speak_reply_on_success: true
+  # First "user" message, so the model sees a conversation that Mel opens.
+  start_token: "[SCENARIO_START]"
+  # Fixed so every trainee gets the same stimulus with no generation delay.
+  opening_line: "Eighty dollars. Centre fees have gone up eighty dollars. I can't afford that! What are you going to do about this?"
+  opening_verdict: neutral
+  opening_emotion: agitated
+  # Spoken when the model fails to produce valid tags max_retries + 1 times.
+  # Uses a turn but is never a strike.
+  fallback_line: "Sorry, what was that? I didn't catch you."
+  fallback_verdict: neutral
+  fallback_emotion: agitated
+  max_retries: 1
+  # Drop a trailing fragment cut off by the token cap, unless it is all
+  # she said.
+  drop_truncated_fragment: true
 
 # Each engine section is `engine: <name>` plus any options, which are passed
 # straight to that engine's constructor. `fake` engines need no models and
