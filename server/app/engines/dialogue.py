@@ -52,7 +52,7 @@ class FakeDialogue(Dialogue):
         line = history[-1]["content"]
         if any(word in line.lower() for word in self._KEYWORDS):
             return Reply("deescalated", "softening", "Okay. Thank you for saying that.")
-        return Reply("neutral", "agitated", f"You said: {line}. That doesn't help.")
+        return Reply("neutral", "agitated", f'"{line}" That doesn\'t help.')
 
 
 _ENGINES: dict[str, type[Dialogue]] = {

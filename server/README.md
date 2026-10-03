@@ -36,7 +36,7 @@ cd server
 uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements.txt
 .venv\Scripts\python -m app.main
-# then open http://localhost:8000/health in a browser
+# then open http://localhost:8000 for the test page
 ```
 
 ### Tests

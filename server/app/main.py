@@ -3,14 +3,18 @@
 import asyncio
 import contextlib
 import json
+import pathlib
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import fastapi
 import uvicorn
+from fastapi import staticfiles
 
 from app import config, session
 from app.engines import dialogue, stt, tts
+
+_WEB_DIR = pathlib.Path(__file__).resolve().parent.parent / "web"
 
 settings = config.load()
 speech_to_text = stt.build(settings.speech_to_text)
@@ -122,6 +126,10 @@ def _audio_format(sample_rate: int) -> dict[str, Any]:
         The format block used in the health payload.
     """
     return {"sample_rate": sample_rate, "channels": 1, "format": "float32"}
+
+
+# Mounted last so the routes above take priority over static files.
+app.mount("/", staticfiles.StaticFiles(directory=_WEB_DIR, html=True), name="web")
 
 
 def main() -> None:
