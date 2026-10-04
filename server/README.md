@@ -82,8 +82,10 @@ CPU and first audio takes ~1.6-2s; it needs ~8 GB to run at full speed.
 
 ### Sending recorded speech
 
-Typed lines on the test page skip speech recognition. To exercise it,
-send 16-bit mono 16 kHz WAVs (e.g. from Unity's `CapturedUtterances`
+On the test page, click **Talk**, speak, then click **Stop & send** — the
+recording goes through Whisper exactly as Unity's utterances do (typed
+lines skip speech recognition). Use headphones so the mic does not pick
+up Mel. You can also send 16-bit mono 16 kHz WAVs (e.g. from Unity's `CapturedUtterances`
 folder) to a running server:
 
 ```bash

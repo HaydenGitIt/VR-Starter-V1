@@ -221,3 +221,11 @@ def test_unwinnable_rules_are_rejected() -> None:
     """progress + allowed misses must fit within max_turns."""
     with pytest.raises(ValueError):
         dataclasses.replace(_RULES, progress_to_resolve=7)
+
+
+def test_audio_frame_never_starts_with_a_brace() -> None:
+    """Unity would drop such a frame as JSON; the nudge is inaudible."""
+    sample = np.frombuffer(bytes([0x7B, 0x00, 0x00, 0x3F]), dtype="<f4")  # ~0.5
+    frame = session.audio_frame(sample)
+    assert frame[:1] != b"{"
+    assert abs(np.frombuffer(frame, dtype="<f4")[0] - sample[0]) < 1e-6

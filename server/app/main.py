@@ -6,7 +6,7 @@ import contextlib
 import json
 import pathlib
 import traceback
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from typing import Any
 
 import fastapi
@@ -83,6 +83,25 @@ async def lifespan(_: fastapi.FastAPI) -> AsyncIterator[None]:
 
 
 app = fastapi.FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_cache(
+    request: fastapi.Request,
+    call_next: Callable[[fastapi.Request], Awaitable[fastapi.Response]],
+) -> fastapi.Response:
+    """Makes browsers re-check the test page, so edits show on a normal reload.
+
+    Args:
+        request: The incoming request.
+        call_next: The rest of the app.
+
+    Returns:
+        The response, marked to be revalidated before reuse.
+    """
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/health")

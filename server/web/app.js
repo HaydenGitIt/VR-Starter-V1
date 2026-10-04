@@ -148,6 +148,82 @@ function send(type, content) {
   socket.send(JSON.stringify(content === undefined ? {type} : {type, content}));
 }
 
+// --- Microphone: click Talk, speak, click again to send one utterance. ---
+
+let recording = null;   // {stream, source, processor, chunks} while talking.
+
+/** Starts or stops a recording; stopping sends it as one utterance. */
+async function toggleTalk() {
+  if (recording) {
+    stopAndSend();
+    return;
+  }
+  audio = audio || new AudioContext();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(
+        {audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}});
+  } catch (e) {
+    log('bad', `Microphone unavailable: ${e.message}`);
+    return;
+  }
+  const source = audio.createMediaStreamSource(stream);
+  // ScriptProcessor is deprecated but still universal, and needs no extra file.
+  const processor = audio.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  processor.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  source.connect(processor);
+  processor.connect(audio.destination);  // Required for it to run; outputs silence.
+  recording = {stream, source, processor, chunks};
+  $('talk').textContent = 'Stop & send';
+}
+
+/** Ends the recording and sends it at the server's capture rate. */
+function stopAndSend() {
+  const {stream, source, processor, chunks} = recording;
+  recording = null;
+  $('talk').textContent = 'Talk';
+  processor.disconnect();
+  source.disconnect();
+  stream.getTracks().forEach((track) => track.stop());
+
+  const samples = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    samples.set(chunk, offset);
+    offset += chunk.length;
+  }
+  const utterance = downsample(samples, audio.sampleRate, limits.capture_sample_rate);
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    log('bad', 'Not connected.');
+    return;
+  }
+  log('trainee', `Trainee: (spoke for ${(utterance.length / limits.capture_sample_rate).toFixed(1)}s)`);
+  socket.send(utterance.buffer);
+}
+
+/**
+ * Resamples by averaging each output sample's span of input, which also
+ * filters out the high frequencies that would otherwise alias.
+ * @param {!Float32Array} input Audio at the microphone's rate.
+ * @param {number} fromRate Input sample rate.
+ * @param {number} toRate Output sample rate (lower than fromRate).
+ * @return {!Float32Array} Audio at toRate.
+ */
+function downsample(input, fromRate, toRate) {
+  const ratio = fromRate / toRate;
+  const output = new Float32Array(Math.floor(input.length / ratio));
+  for (let i = 0; i < output.length; i++) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(input.length, Math.floor((i + 1) * ratio));
+    let sum = 0;
+    for (let j = start; j < end; j++) sum += input[j];
+    output[i] = sum / Math.max(1, end - start);
+  }
+  return output;
+}
+
+$('talk').onclick = toggleTalk;
 $('begin').onclick = () => send('begin');
 $('reset').onclick = () => send('reset');
 $('summary').onclick = () => send('summary');

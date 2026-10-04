@@ -28,6 +28,26 @@ Message = dict[str, Any] | bytes
 _SENTENCE_END = re.compile(r"([.!?])(\s+|$)")
 
 
+def audio_frame(audio: np.ndarray) -> bytes:
+    """Packs audio as a float32 little-endian frame Unity reads as audio.
+
+    Unity treats any frame starting with "{" (0x7B) as JSON. The first byte
+    is the least significant byte of the first sample, so about 1 frame in
+    256 would start with it and be dropped as unparseable JSON. Flipping
+    that byte's lowest bit changes the sample by ~1e-7, which is inaudible.
+
+    Args:
+        audio: Mono float32 samples.
+
+    Returns:
+        The frame, never starting with "{".
+    """
+    data = bytearray(audio.astype("<f4").tobytes())
+    if data[:1] == b"{":
+        data[0] ^= 0x01
+    return bytes(data)
+
+
 class ScenarioSession:
     """One trainee's attempt at the scenario."""
 
@@ -138,7 +158,7 @@ class ScenarioSession:
         if self._opening_audio is None:
             self._opening_audio = self._tts.synthesise(rules.opening_line)
         yield {"type": "tags", "verdict": rules.opening_verdict, "emotion": rules.opening_emotion}
-        yield self._opening_audio.astype("<f4").tobytes()
+        yield audio_frame(self._opening_audio)
         yield {"type": "reply", "text": rules.opening_line}
         yield {"type": "turn_end", "ended": False}
 
@@ -282,7 +302,7 @@ class ScenarioSession:
             if spoken:
                 yield gap
             spoken.append(sentence)
-            yield audio.astype("<f4").tobytes()
+            yield audio_frame(audio)
 
     def _remember(self, verdict: str, emotion: str, line: str) -> None:
         """Adds Mel's line to the history, tagged as the model writes it.
