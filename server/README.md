@@ -67,9 +67,18 @@ otherwise):
 ### Speech synthesis
 
 Kokoro (`text_to_speech.kokoro` in `config.yaml`) downloads its model
-(~330 MB) on first start. The default PyTorch install is CPU-only, which
-works but adds ~1s before Mel starts speaking; a CUDA build of PyTorch
-makes it near-instant, at the cost of some GPU memory.
+(~330 MB) on first start. `requirements.txt` installs CPU-only PyTorch,
+which works but Mel starts speaking ~1-2s after the trainee. With an
+NVIDIA GPU, install the CUDA build afterwards (~2.5 GB download):
+
+```bash
+uv pip install --python .venv -r requirements-cuda.txt
+```
+
+Measured on an RTX 2060 (6 GB) with `qwen2.5:3b`: first audio ~0.5s after
+the trainee finishes, 3.2 GB of GPU memory in use. `llama3:8b` does not
+fully fit alongside the other engines on 6 GB, so it partly runs on the
+CPU and first audio takes ~1.6-2s; it needs ~8 GB to run at full speed.
 
 ### Sending recorded speech
 

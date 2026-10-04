@@ -1,0 +1,6 @@
+# Optional: CUDA PyTorch, so Kokoro runs on the GPU. Mel starts speaking
+# ~0.5s after the trainee instead of ~1-2s, for ~0.5-1 GB of GPU memory.
+# Install AFTER requirements.txt (which brings the CPU build):
+#   uv pip install --python .venv -r requirements-cuda.txt
+--index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
