@@ -4,6 +4,9 @@ pyyaml
 numpy
 faster-whisper
 ollama
+kokoro
+# English model for Kokoro's phonemiser; otherwise downloaded on first run.
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 # CUDA libraries for faster-whisper (found automatically, see engines/stt.py).
 nvidia-cublas-cu12
 nvidia-cudnn-cu12==9.*

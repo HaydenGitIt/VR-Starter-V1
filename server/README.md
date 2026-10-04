@@ -64,6 +64,13 @@ otherwise):
 .venv\Scripts\python check_dialogue.py --model llama3:8b
 ```
 
+### Speech synthesis
+
+Kokoro (`text_to_speech.kokoro` in `config.yaml`) downloads its model
+(~330 MB) on first start. The default PyTorch install is CPU-only, which
+works but adds ~1s before Mel starts speaking; a CUDA build of PyTorch
+makes it near-instant, at the cost of some GPU memory.
+
 ### Sending recorded speech
 
 Typed lines on the test page skip speech recognition. To exercise it,

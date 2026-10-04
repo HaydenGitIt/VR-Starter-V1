@@ -119,11 +119,17 @@ class OllamaDialogue(Dialogue):
         self._client = ollama.Client(host)
 
     def warm_up(self) -> None:
-        """Loads the model into VRAM, which takes several seconds cold."""
+        """Loads the model and caches the system prompt.
+
+        Sending the real system prompt lets Ollama keep it processed, so
+        the first trainee turn is as fast as the rest (measured 1.9s to
+        tags without this, 0.2s with it).
+        """
         self._client.chat(
             model=self._model,
-            messages=[{"role": "user", "content": "Hello."}],
-            options={"num_predict": 5})
+            messages=[{"role": "system", "content": self._prompt},
+                      {"role": "user", "content": "Hello."}],
+            options={**self._options, "num_predict": 1})
 
     def generate(self, history: list[dict[str, str]]) -> Reply:
         """See base class."""

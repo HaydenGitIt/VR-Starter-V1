@@ -65,4 +65,8 @@ dialogue:
     tag_deadline_chars: 60    # no valid tags by now -> reject and retry
 
 text_to_speech:
-  engine: fake
+  engine: kokoro
+  kokoro:                 # outputs 24000 Hz: keep audio.playback_sample_rate at 24000
+    voice: af_heart       # af_/am_ American, bf_/bm_ British
+    speed: 1.0
+    device: null          # null = GPU if PyTorch has CUDA, else CPU
