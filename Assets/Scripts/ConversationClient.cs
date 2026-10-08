@@ -153,8 +153,39 @@ public class ConversationClient : MonoBehaviour
     // LIFECYCLE
     // ---------------------------------------------------------------
 
+    /// <summary>
+    /// The live client. There must be exactly one, because two would each
+    /// open their own socket and start their own scenario on the server, and
+    /// other scripts finding "a" client could end up talking to different ones.
+    /// </summary>
+    public static ConversationClient Instance { get; private set; }
+
+    private void Awake()
+    {
+        // The real client lives on the persistent Bootstrap object, so it can
+        // start connecting during the splash and introduction and hide the
+        // server's warm-up.
+        //
+        // A second one in a scene is not an error though - it is how you press
+        // Play directly in the Deescalation scene while building, without
+        // starting from Bootstrap every time. When the persistent one already
+        // exists, this one simply stands down.
+        if (Instance != null && Instance != this)
+        {
+            Debug.Log("[ConversationClient] A client already exists (probably the " +
+                      "persistent one from Bootstrap). This scene-local copy is standing down.");
+
+            enabled = false;
+            return;
+        }
+
+        Instance = this;
+    }
+
     private void Start()
     {
+        if (!enabled) return;
+
         if (config == null)
         {
             Debug.LogError("[ConversationClient] No PipelineConfig assigned.");
@@ -182,6 +213,10 @@ public class ConversationClient : MonoBehaviour
 
     private async void OnDestroy()
     {
+        // Only clear the static reference if this object is the one holding it.
+        // A stood-down duplicate being destroyed must not orphan the real client.
+        if (Instance == this) Instance = null;
+
         await Disconnect();
     }
 

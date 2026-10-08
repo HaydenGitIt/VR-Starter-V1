@@ -220,6 +220,7 @@ GameObject:
   - component: {fileID: 1621045371}
   - component: {fileID: 1621045373}
   - component: {fileID: 1621045372}
+  - component: {fileID: 1621045374}
   m_Layer: 0
   m_Name: Bootstrap
   m_TagString: Untagged
@@ -277,6 +278,23 @@ MonoBehaviour:
   fadeRenderer: {fileID: 1007242747}
   distanceFromCamera: 0.3
   startBlack: 1
+--- !u!114 &1621045374
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621045368}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04c293ba67c008b4cb7ada5aafefeb29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConversationClient
+  config: {fileID: 11400000, guid: 491e2017ef5dd504b95d0994ac766b81, type: 2}
+  connectOnStart: 1
+  connectionAttempts: 10
+  retryDelay: 3
+  verboseLogging: 1
 --- !u!1 &1675085353
 GameObject:
   m_ObjectHideFlags: 0
