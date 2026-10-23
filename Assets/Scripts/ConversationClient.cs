@@ -88,6 +88,17 @@ public class ConversationClient : MonoBehaviour
     /// <summary>Playback rate the server reported. Trust this over the local config.</summary>
     public int PlaybackSampleRate { get; private set; }
 
+    /// <summary>
+    /// True once the server has sent its handshake, not merely once the socket
+    /// opened.
+    ///
+    /// The difference matters: an open socket says nothing about whether the
+    /// server has finished warming its engines, and the handshake is what
+    /// carries the playback sample rate and the scenario rules. Anything
+    /// deciding whether it is safe to start should check THIS, not IsConnected.
+    /// </summary>
+    public bool IsReady => handshakeReceived;
+
     private WebSocket socket;
     private bool handshakeReceived;
 

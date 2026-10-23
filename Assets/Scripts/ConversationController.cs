@@ -81,26 +81,62 @@ public class ConversationController : MonoBehaviour
 
     private float reopenAt = -1f;
 
+    // True once every required reference was found. Guards the subscribe and
+    // unsubscribe below, which would otherwise run against nulls.
+    private bool wired;
+
     private void Awake()
     {
+        // Prefer the singleton over a scene search.
+        //
+        // A scene-local ConversationClient that has STOOD DOWN - because the
+        // persistent one from Bootstrap already claimed Instance - is still
+        // sitting in the scene and is still findable. FindAnyObjectByType
+        // makes no promise about which of the two it returns, so roughly half
+        // the time this would subscribe to the disabled copy and then wait
+        // forever for a client that never connects, with nothing in the
+        // Console to explain why Mel is silent.
+        if (client == null) client = ConversationClient.Instance;
         if (client == null) client = FindInScene<ConversationClient>();
+
         if (player == null) player = FindInScene<StreamingAudioPlayer>();
         if (detector == null) detector = FindInScene<VoiceActivityDetector>();
         if (microphone == null) microphone = FindInScene<MicrophoneCapture>();
 
-        if (client == null || player == null || detector == null)
+        // NAME THE MISSING PIECE, rather than saying something is missing.
+        //
+        // The old message listed all three dependencies whichever one was
+        // absent, which sent you checking components that were perfectly fine.
+        // The usual cause is a component that has lost its script reference:
+        // the GameObject still sits in the Hierarchy looking entirely normal,
+        // so there is nothing to notice without being told where to look.
+        string missing = "";
+
+        if (client == null) missing += "\n   - ConversationClient  (lives on the Bootstrap object)";
+        if (player == null) missing += "\n   - StreamingAudioPlayer";
+        if (detector == null) missing += "\n   - VoiceActivityDetector";
+
+        if (missing.Length > 0)
         {
-            Debug.LogError("[ConversationController] Needs a ConversationClient, a " +
-                           "StreamingAudioPlayer and a VoiceActivityDetector in the scene.");
+            Debug.LogError(
+                "[ConversationController] Disabling myself. Could not find:" + missing +
+                "\n\nIf that object IS in the Hierarchy, select it and look for a component " +
+                "reading 'Missing (Mono Script)'. A lost script reference leaves the " +
+                "GameObject looking normal while making the component invisible to code.", this);
+
             enabled = false;
             return;
         }
+
+        wired = true;
 
         if (config == null && microphone != null) config = microphone.Config;
     }
 
     private void OnEnable()
     {
+        if (!wired) return;
+
         client.OnReady += HandleReady;
         client.OnTags += HandleTags;
         client.OnTranscript += HandleTranscript;
@@ -118,6 +154,13 @@ public class ConversationController : MonoBehaviour
 
     private void OnDisable()
     {
+        // Awake gives up when a reference is missing, but Unity still calls
+        // OnDisable - on the way out of Play mode if nothing else. Without
+        // this guard that throws a NullReferenceException on top of the real
+        // error, and the stack trace points here rather than at the cause,
+        // which reads like a second, unrelated fault.
+        if (!wired) return;
+
         client.OnReady -= HandleReady;
         client.OnTags -= HandleTags;
         client.OnTranscript -= HandleTranscript;
@@ -378,7 +421,13 @@ public class ConversationController : MonoBehaviour
 
     private static T FindInScene<T>() where T : UnityEngine.Object
     {
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
+        // FindAnyObjectByType does not guarantee WHICH instance it returns when
+        // several exist - that is fine here, because every type looked up this
+        // way is meant to be unique in the scene, and it is faster than the
+        // ordered alternatives.
+        return FindAnyObjectByType<T>();
+#elif UNITY_2023_1_OR_NEWER
         return FindFirstObjectByType<T>();
 #else
         return FindObjectOfType<T>();

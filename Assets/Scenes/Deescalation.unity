@@ -5513,12 +5513,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1818523026}
-  - component: {fileID: 1818523025}
   - component: {fileID: 1818523024}
   - component: {fileID: 1818523023}
-  - component: {fileID: 1818523022}
   - component: {fileID: 1818523021}
-  - component: {fileID: 1818523020}
+  - component: {fileID: 1818523028}
+  - component: {fileID: 1818523027}
   m_Layer: 0
   m_Name: ConversationSystem
   m_TagString: Untagged
@@ -5526,27 +5525,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1818523020
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1818523019}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 978aee2476bc2d54c91fd3dd22c15057, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScenarioDirector
-  client: {fileID: 0}
-  controller: {fileID: 0}
-  successTimeline: {fileID: 0}
-  failureTimeline: {fileID: 0}
-  settleSeconds: 4
-  autoStart: 1
-  endingFallbackSeconds: 3
-  connectingPanel: {fileID: 0}
-  connectionFailedPanel: {fileID: 0}
 --- !u!114 &1818523021
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5566,21 +5544,6 @@ MonoBehaviour:
   config: {fileID: 0}
   beginOnReady: 1
   pauseBeforeListening: 0.35
---- !u!114 &1818523022
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1818523019}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6338ad5d6d4465d4486a1aad9cd43ec7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpeechPlaybackBridge
-  client: {fileID: 0}
-  player: {fileID: 0}
-  flushOnEnding: 1
 --- !u!114 &1818523023
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5612,18 +5575,6 @@ MonoBehaviour:
   fallBackToDefaultDevice: 1
   ringBufferSeconds: 2
   captureOnStart: 1
---- !u!114 &1818523025
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1818523019}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f4e8cf35ffaecc4f96d37bcfda3a83b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ConversationClient
 --- !u!4 &1818523026
 Transform:
   m_ObjectHideFlags: 0
@@ -5639,6 +5590,42 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1818523027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818523019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83cb6a0f355f63b4aadccdbacb940058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScenarioDirector
+  client: {fileID: 0}
+  controller: {fileID: 0}
+  successTimeline: {fileID: 682025515}
+  failureTimeline: {fileID: 1005832192}
+  settleSeconds: 4
+  autoStart: 1
+  endingFallbackSeconds: 3
+  connectingPanel: {fileID: 0}
+  connectionFailedPanel: {fileID: 0}
+--- !u!114 &1818523028
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818523019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f8ca106ccaa0fa429244377e00afe33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeechPlaybackBridge
+  client: {fileID: 0}
+  player: {fileID: 0}
+  flushOnEnding: 1
 --- !u!4 &1833209005 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4298873422371482, guid: 5bdfa31a609320a4fb30466f45c328b4, type: 3}

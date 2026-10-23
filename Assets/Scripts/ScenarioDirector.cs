@@ -96,18 +96,40 @@ public class ScenarioDirector : MonoBehaviour
     private bool settled;
     private bool started;
 
+    // True once both references were found. Guards the subscribe and
+    // unsubscribe below, which would otherwise run against nulls.
+    private bool wired;
+
     private void Awake()
     {
+        // Prefer the singleton - see the matching comment in
+        // ConversationController. A stood-down scene-local client is still
+        // findable, and subscribing to it would mean never hearing OnReady.
+        if (client == null) client = ConversationClient.Instance;
         if (client == null) client = FindInScene<ConversationClient>();
+
         if (controller == null) controller = FindInScene<ConversationController>();
 
-        if (client == null || controller == null)
+        // Name the missing piece. See the matching comment in
+        // ConversationController - a lost script reference is by far the most
+        // common cause, and it is invisible until you know to look for it.
+        string missing = "";
+
+        if (client == null) missing += "\n   - ConversationClient  (lives on the Bootstrap object)";
+        if (controller == null) missing += "\n   - ConversationController";
+
+        if (missing.Length > 0)
         {
-            Debug.LogError("[ScenarioDirector] Needs a ConversationClient and a " +
-                           "ConversationController in the scene.");
+            Debug.LogError(
+                "[ScenarioDirector] Disabling myself. Could not find:" + missing +
+                "\n\nIf that object IS in the Hierarchy, select it and look for a component " +
+                "reading 'Missing (Mono Script)'.", this);
+
             enabled = false;
             return;
         }
+
+        wired = true;
 
         // The controller must NOT start on its own here - this script decides
         // when. Its beginOnReady flag is for the flat test scene only.
@@ -116,6 +138,8 @@ public class ScenarioDirector : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!wired) return;
+
         client.OnReady += HandleServerReady;
         client.OnEnding += HandleEnding;
         client.OnError += HandleError;
@@ -124,6 +148,8 @@ public class ScenarioDirector : MonoBehaviour
 
     private void OnDisable()
     {
+        if (!wired) return;
+
         client.OnReady -= HandleServerReady;
         client.OnEnding -= HandleEnding;
         client.OnError -= HandleError;
@@ -136,6 +162,25 @@ public class ScenarioDirector : MonoBehaviour
 
         if (connectingPanel != null) connectingPanel.SetActive(true);
         if (connectionFailedPanel != null) connectionFailedPanel.SetActive(false);
+
+        // CHECK THE CURRENT STATE, do not only listen for the transition.
+        //
+        // The client lives on the persistent Bootstrap object and begins
+        // connecting during the splash, precisely so the server's ~20s warm-up
+        // is hidden behind the introduction. That means OnReady has almost
+        // always ALREADY FIRED by the time this scene loads.
+        //
+        // Subscribing alone therefore waits forever for an event that has been
+        // and gone: serverReady stays false, TryStart never proceeds, and Mel
+        // simply never speaks - with no error to explain why.
+        if (client != null && client.IsReady)
+        {
+            serverReady = true;
+
+            if (connectingPanel != null) connectingPanel.SetActive(false);
+
+            Debug.Log("[ScenarioDirector] Server was already connected when this scene loaded.");
+        }
 
         StartCoroutine(SettleRoutine());
     }
@@ -165,7 +210,18 @@ public class ScenarioDirector : MonoBehaviour
 
     private void TryStart()
     {
-        if (started || !serverReady || !settled) return;
+        if (started) return;
+
+        // Say WHY we are still waiting. A director that silently never starts
+        // looks identical to a broken microphone, a dead server, or a scene
+        // wired up wrongly - and it is none of those. One line here turns a
+        // long hunt into a glance at the Console.
+        if (!serverReady || !settled)
+        {
+            Debug.Log($"[ScenarioDirector] Waiting - " +
+                      $"server ready: {serverReady}, settled: {settled}");
+            return;
+        }
 
         if (!autoStart)
         {
@@ -192,6 +248,13 @@ public class ScenarioDirector : MonoBehaviour
         started = true;
 
         if (connectingPanel != null) connectingPanel.SetActive(false);
+
+        // Clear any previous attempt before the first turn arrives, so a
+        // retry does not append to the last trainee's log.
+        if (SessionLog.Instance != null)
+        {
+            SessionLog.Instance.BeginSession();
+        }
 
         SetPhase(Phase.Running);
         controller.BeginScenario();
@@ -294,7 +357,13 @@ public class ScenarioDirector : MonoBehaviour
 
     private static T FindInScene<T>() where T : UnityEngine.Object
     {
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
+        // FindAnyObjectByType does not guarantee WHICH instance it returns when
+        // several exist - that is fine here, because every type looked up this
+        // way is meant to be unique in the scene, and it is faster than the
+        // ordered alternatives.
+        return FindAnyObjectByType<T>();
+#elif UNITY_2023_1_OR_NEWER
         return FindFirstObjectByType<T>();
 #else
         return FindObjectOfType<T>();

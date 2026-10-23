@@ -161,6 +161,16 @@ public class ConnectionTestDisplay : MonoBehaviour
             }
         }
 
+        if (SessionLog.Instance != null)
+        {
+            SessionLog.Session session = SessionLog.Instance.Current;
+
+            GUI.Label(new Rect(pad, y, width, 24),
+                $"LOG: {session.turns.Count} turn(s)   progress {session.Progress}   "
+                + $"strikes {session.Strikes}   avg {session.AverageLatency:F2}s", bold);
+            y += 30;
+        }
+
         if (GUI.Button(new Rect(pad, y, 160, 32), "Begin scenario"))
         {
             client.Begin();
@@ -197,7 +207,13 @@ public class ConnectionTestDisplay : MonoBehaviour
     /// </summary>
     private static T FindInScene<T>() where T : Object
     {
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_6000_0_OR_NEWER
+        // FindAnyObjectByType does not guarantee WHICH instance it returns when
+        // several exist - that is fine here, because every type looked up this
+        // way is meant to be unique in the scene, and it is faster than the
+        // ordered alternatives.
+        return FindAnyObjectByType<T>();
+#elif UNITY_2023_1_OR_NEWER
         return FindFirstObjectByType<T>();
 #else
         return FindObjectOfType<T>();
