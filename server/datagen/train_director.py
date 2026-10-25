@@ -25,32 +25,44 @@ SERVER_DIR = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = SERVER_DIR / "models" / "director"
 
 
-def evaluate(model_dir: pathlib.Path, rows: list[dict[str, Any]], threshold: float,
+def evaluate(model_dir: pathlib.Path, data_dir: pathlib.Path, threshold: float,
              device: str | None) -> None:
-    """Reports how often the trained director's verdict matches the graders' on test lines.
+    """Compares the trained director's verdicts, and Mel's own, with the graders' on test lines.
+
+    Mel's verdicts are the tags she wrote in-game when the conversations were generated,
+    i.e. how the game judges without a director.
 
     Args:
         model_dir: The trained checkpoint.
-        rows: Test rows from the export.
+        data_dir: The data folder holding the export and the conversations.
         threshold: P(reached her) needed for "deescalated", as in the server's config.
         device: Where to run the model, or None for the GPU if available.
     """
+    rows = store.read_jsonl(data_dir / "director_test.jsonl")
+    index = [e for e in store.read_jsonl(data_dir / "director_index.jsonl") if e["split"] == "test"]
+    conversations = store.read_conversations(data_dir)
+    mel = {(c["id"], t["turn"]): t["verdict"] == "deescalated" for c in conversations for t in c["turns"]}
+    mel_models = ", ".join(sorted({c["roles"]["parent"]["model"] for c in conversations}))
     engine = director.LayaDirector(str(model_dir), device=device, threshold=threshold)
     engine.warm_up()
     # Lines the graders split on have no right answer, so they're left out of the score.
-    clear = [row for row in rows if row["gold"]["reached_her"]["noul"] in (0.0, 1.0)]
-    wrong_strikes = wrong_successes = 0
-    for row in clear:
-        reached = engine.judge_state(row["state"]).verdict == "deescalated"
-        expected = row["gold"]["reached_her"]["noul"] == 1.0
-        wrong_strikes += expected and not reached
-        wrong_successes += reached and not expected
-    right = len(clear) - wrong_strikes - wrong_successes
-    print(f"\nDirector verdicts on the {len(clear)} test lines the graders agreed on "
-          f"({len(rows) - len(clear)} split lines left out): {right} match "
-          f"({right / max(len(clear), 1):.0%}). Wrong strikes (good lines counted as misses): "
-          f"{wrong_strikes}. Wrong successes (poor lines counted as reaching her): "
-          f"{wrong_successes}.")
+    clear = [(row, entry) for row, entry in zip(rows, index)
+             if row["gold"]["reached_her"]["noul"] in (0.0, 1.0)]
+    expected = [row["gold"]["reached_her"]["noul"] == 1.0 for row, _ in clear]
+    calls = {"Laya, the director": [engine.judge_state(row["state"]).verdict == "deescalated"
+                                    for row, _ in clear],
+             f"Mel's own tags ({mel_models})": [mel[(e["conversation_id"], e["turn"])]
+                                                for _, e in clear]}
+    print(f"\nOn the {len(clear)} test lines the graders agreed on "
+          f"({len(rows) - len(clear)} split lines left out):")
+    for label, reached in calls.items():
+        wrong_strikes = sum(e and not r for r, e in zip(reached, expected))
+        wrong_successes = sum(r and not e for r, e in zip(reached, expected))
+        right = len(clear) - wrong_strikes - wrong_successes
+        print(f"  {label:32} {right:3}/{len(clear)} match the graders ({right / max(len(clear), 1):.0%}); "
+              f"wrong strikes {wrong_strikes}, wrong successes {wrong_successes}")
+    print("  (wrong strike: a good line counted as a miss; wrong success: a poor line counted "
+          "as reaching her)")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -75,13 +87,18 @@ def main(argv: list[str] | None = None) -> None:
                         help="P(reached her) for the test report, as in config.yaml")
     parser.add_argument("--data", type=pathlib.Path, default=store.DEFAULT_DATA_DIR,
                         help=f"data folder holding the export (default {store.DEFAULT_DATA_DIR})")
+    parser.add_argument("--report-only", action="store_true",
+                        help="skip training; just compare the saved model and Mel on the test lines")
     args = parser.parse_args(argv)
+    train, test = args.data / "director_train.jsonl", args.data / "director_test.jsonl"
+    test_rows = store.read_jsonl(test)
+    if args.report_only:
+        evaluate(args.output, args.data, args.threshold, args.device)
+        return
 
     import laya.train  # pylint: disable=import-outside-toplevel  (heavy; only when training)
     import torch  # pylint: disable=import-outside-toplevel
 
-    train, test = args.data / "director_train.jsonl", args.data / "director_test.jsonl"
-    test_rows = store.read_jsonl(test)
     print(f"{len(store.read_jsonl(train))} training rows, {len(test_rows)} test rows")
     config = laya.train.TrainConfig(
         epochs=args.epochs, micro_batch=args.micro_batch, grad_accum=args.grad_accum,
@@ -100,7 +117,7 @@ def main(argv: list[str] | None = None) -> None:
             "epochs", "micro_batch", "grad_accum", "freeze_encoder")}}, indent=2), encoding="utf-8")
     print(f"Saved to {args.output}")
     if test_rows:
-        evaluate(args.output, test_rows, args.threshold, args.device)
+        evaluate(args.output, args.data, args.threshold, args.device)
     print("\nTo use it in the game, put this in config.local.yaml and restart the server:\n"
           "director:\n  engine: laya")
 

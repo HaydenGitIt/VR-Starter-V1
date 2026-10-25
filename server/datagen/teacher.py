@@ -7,6 +7,7 @@ random style instead, since real people are inconsistent. The teacher sees only 
 spoken lines, plus what any staff member would know; never her private backstory.
 """
 
+import pathlib
 import random
 import re
 from typing import Any
@@ -117,24 +118,10 @@ STAFF_MANNER = ["You speak briefly and plainly.", "You are chatty and warm by na
                 "You are a little formal.", "You are quietly spoken.",
                 "You talk in casual, everyday Australian English."]
 
-TEACHER_PROMPT = """You are playing a staff member at an early childhood centre in a training role-play. Stay in character.
-
-WHO YOU ARE
-You are {name}, {role}, {experience}. {manner}
-
-THE SITUATION
-Mel, the mother of four-year-old Ava, has just come to the doorway of Ava's room, upset about the centre's fees. What you know as staff: the centre director, Sarah, set new fees that start next month; families were told by email; billing questions normally go to the office; you cannot change fees yourself. You know nothing else about Mel's situation except what she tells you.
-
-HOW YOU HANDLE MOMENTS LIKE THIS
-{habit}
-
-YOUR NEXT LINE
-{style}
-
-RULES
-- Reply with only the words you say out loud: one or two short, natural spoken sentences.
-- No actions, stage directions, quotation marks, name labels or narration.
-- Never write Mel's lines. Respond to what she has just said."""
+# The teacher's system prompt, editable in prompts/teacher_prompt.txt. {name}, {role},
+# {experience}, {manner}, {habit} and {style} are filled in for each turn.
+TEACHER_PROMPT = (pathlib.Path(__file__).resolve().parent / "prompts" / "teacher_prompt.txt"
+                  ).read_text(encoding="utf-8").rstrip()
 
 
 def pick_profile(rng: random.Random) -> str:
