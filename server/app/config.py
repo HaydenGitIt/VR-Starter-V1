@@ -74,6 +74,7 @@ class Settings:
         speech_to_text: Which STT engine to use.
         dialogue: Which dialogue engine to use.
         text_to_speech: Which TTS engine to use.
+        director: Which director engine judges the trainee ("none": Mel's own tags do).
     """
 
     host: str
@@ -85,6 +86,8 @@ class Settings:
     speech_to_text: EngineSettings
     dialogue: EngineSettings
     text_to_speech: EngineSettings
+    director: EngineSettings = dataclasses.field(
+        default_factory=lambda: EngineSettings(engine="none", options={}))
 
 
 def load(overrides: Sequence[str] = ()) -> Settings:
@@ -123,6 +126,7 @@ def load(overrides: Sequence[str] = ()) -> Settings:
         speech_to_text=_engine(raw["speech_to_text"]),
         dialogue=_engine(raw["dialogue"]),
         text_to_speech=_engine(raw["text_to_speech"]),
+        director=_engine(raw.get("director") or {"engine": "none"}),
     )
 
 

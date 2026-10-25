@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from app import config, session
-from app.engines import dialogue, stt, tts
+from app.engines import dialogue, director, stt, tts
 
 _FAKE = config.EngineSettings(engine="fake", options={})
 _RULES = config.Scenario(
@@ -33,7 +33,8 @@ class Scripted(dialogue.Dialogue):
         """
         self._script = list(script)
 
-    def generate(self, history: list[dict[str, str]]) -> dialogue.Reply:
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> dialogue.Reply:
         """Returns the next scripted reply, streamed a character at a time."""
         entry = self._script.pop(0)
         if entry is None:
@@ -41,11 +42,13 @@ class Scripted(dialogue.Dialogue):
         return dialogue.Reply(entry[0], entry[1], (c for c in entry[2]))
 
 
-def _session(*script: tuple[str, str, str] | None, **rules: object) -> session.ScenarioSession:
+def _session(*script: tuple[str, str, str] | None, judge: director.Director | None = None,
+             **rules: object) -> session.ScenarioSession:
     """Creates a session with fake engines and a scripted Mel.
 
     Args:
         *script: Mel's replies, in order.
+        judge: The director, or None for Mel's own tags to decide.
         **rules: Overrides for the default scenario rules.
 
     Returns:
@@ -58,7 +61,8 @@ def _session(*script: tuple[str, str, str] | None, **rules: object) -> session.S
         speech_to_text=_FAKE, dialogue=_FAKE, text_to_speech=_FAKE,
     )
     return session.ScenarioSession(
-        settings, stt.FakeSpeechToText(), Scripted(*script), tts.FakeTextToSpeech())
+        settings, stt.FakeSpeechToText(), Scripted(*script), tts.FakeTextToSpeech(),
+        director_engine=judge)
 
 
 def _types(messages: list[session.Message]) -> list[str]:
@@ -229,3 +233,62 @@ def test_audio_frame_never_starts_with_a_brace() -> None:
     frame = session.audio_frame(sample)
     assert frame[:1] != b"{"
     assert abs(np.frombuffer(frame, dtype="<f4")[0] - sample[0]) < 1e-6
+
+
+class Fixed(director.Director):
+    """A director that always gives the same verdict."""
+
+    def __init__(self, verdict: str) -> None:
+        """Initialises the director.
+
+        Args:
+            verdict: The verdict for every line.
+        """
+        self._verdict = verdict
+
+    def judge(self, history: list[dict[str, str]]) -> director.Judgement:
+        """See base class."""
+        return director.judgement(self._verdict, 0.9 if self._verdict == "deescalated" else 0.1)
+
+
+def test_director_verdict_overrides_mels_tags() -> None:
+    """With a director, its verdict scores the turn, whatever tag Mel's model wrote."""
+    scenario = _session(_GOOD, judge=Fixed("neutral"))
+    messages = _say(scenario)
+    assert _find(messages, "tags")["verdict"] == "neutral"
+    summary = _find(list(scenario.handle_command({"type": "summary"})), "summary")
+    assert (summary["strikes"], summary["progress"]) == (1, 0)
+    assert summary["log"][0]["director_p"] == 0.1
+
+
+def test_director_third_strike_never_calls_mels_model() -> None:
+    """A strike the director decides ends the scenario before any model is called."""
+    scenario = _session(_BAD, _BAD, judge=Fixed("neutral"))  # a third call would fail
+    _say(scenario)
+    _say(scenario)
+    messages = _say(scenario)
+    assert _types(messages) == ["tags", "ending", "reply", "turn_complete", "turn_end"]
+    assert _find(messages, "ending")["outcome"] == "disengaged"
+    assert _find(messages, "reply")["text"] == ""
+
+
+def test_director_note_reaches_mels_model_but_not_history() -> None:
+    """Mel's model is told the verdict; the history keeps only what was said."""
+    seen: list[director.Judgement | None] = []
+
+    class Recording(Scripted):
+        """Records the judgement each call receives."""
+
+        def generate(self, history: list[dict[str, str]],
+                     judgement: director.Judgement | None = None) -> dialogue.Reply:
+            """See base class."""
+            seen.append(judgement)
+            return super().generate(history, judgement)
+
+    scenario = _session(judge=Fixed("deescalated"))
+    scenario._dialogue = Recording(_GOOD)  # pylint: disable=protected-access
+    list(scenario.handle_command({"type": "begin"}))
+    _say(scenario, "I hear you.")
+    assert seen[0] and seen[0].verdict == "deescalated"
+    history = scenario._history  # pylint: disable=protected-access
+    assert all(seen[0].note not in m["content"] for m in history)

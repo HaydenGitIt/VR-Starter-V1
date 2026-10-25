@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 
 from app import config
-from app.engines import dialogue, stt, tts
+from app.engines import dialogue, director, stt, tts
 
 Message = dict[str, Any] | bytes
 
@@ -58,6 +58,7 @@ class ScenarioSession:
         dialogue_engine: dialogue.Dialogue,
         text_to_speech: tts.TextToSpeech,
         opening_audio: np.ndarray | None = None,
+        director_engine: director.Director | None = None,
     ) -> None:
         """Initialises an empty session.
 
@@ -68,6 +69,8 @@ class ScenarioSession:
             text_to_speech: Engine for outgoing audio.
             opening_audio: The opening line, synthesised in advance. If
                 None it is synthesised when the scenario begins.
+            director_engine: Engine that judges the trainee's lines, or None
+                for Mel's own tags to decide.
         """
         self._settings = settings
         self._rules = settings.scenario
@@ -75,6 +78,7 @@ class ScenarioSession:
         self._dialogue = dialogue_engine
         self._tts = text_to_speech
         self._opening_audio = opening_audio
+        self._director = director_engine or director.NoDirector()
         self._reset()
 
     def ready_message(self) -> Message:
@@ -148,6 +152,7 @@ class ScenarioSession:
         self._progress = 0
         self._unparsed = 0
         self._outcome: str | None = None
+        self._emotion = self._rules.opening_emotion  # Mel's latest, for a silent ending
 
     def _begin(self) -> Iterator[Message]:
         """Starts a fresh attempt with Mel's fixed opening line.
@@ -187,7 +192,12 @@ class ScenarioSession:
             return
 
         self._history.append({"role": "user", "content": text})
-        reply = self._generate()
+        judgement = self._director.judge(self._history)
+        if judgement and self._ends_silently(judgement.verdict):
+            # Decided before any model is called: the ending has nothing for Mel to say.
+            reply = dialogue.Reply(judgement.verdict, self._emotion, (piece for piece in ()))
+        else:
+            reply = self._generate(judgement)
         self._turn += 1
 
         if reply is None:
@@ -196,11 +206,14 @@ class ScenarioSession:
             self._unparsed += 1
             verdict, emotion, line = (
                 "unparsed", self._rules.fallback_emotion, self._rules.fallback_line)
+            self._emotion = emotion
             yield {"type": "tags", "verdict": self._rules.fallback_verdict, "emotion": emotion}
             yield from self._speak([line], [])
             self._remember(self._rules.fallback_verdict, emotion, line)
         else:
-            verdict, emotion = reply.verdict, reply.emotion
+            # With a director its verdict counts, whatever tag Mel's model wrote.
+            verdict = judgement.verdict if judgement else reply.verdict
+            emotion = self._emotion = reply.emotion
             yield {"type": "tags", "verdict": verdict, "emotion": emotion}
             speak = True
             if outcome := self._score(verdict):
@@ -220,7 +233,8 @@ class ScenarioSession:
         yield {"type": "reply", "text": line}
         latency = round(time.monotonic() - started, 3)
         self._log.append({"turn": self._turn, "trainee": text, "mel": line,
-                          "verdict": verdict, "emotion": emotion, "latency": latency})
+                          "verdict": verdict, "emotion": emotion, "latency": latency,
+                          "director_p": round(judgement.probability, 3) if judgement else None})
         yield {"type": "turn_complete", "turn": self._turn, "verdict": verdict,
                "emotion": emotion, "latency": latency}
 
@@ -230,18 +244,36 @@ class ScenarioSession:
             yield {"type": "ending", "outcome": "disengaged"}
         yield {"type": "turn_end", "ended": self.ended}
 
-    def _generate(self) -> dialogue.Reply | None:
+    def _generate(self, judgement: director.Judgement | None) -> dialogue.Reply | None:
         """Asks the dialogue engine for a reply, retrying malformed ones.
+
+        Args:
+            judgement: The director's verdict for Mel to act out, or None.
 
         Returns:
             The reply, or None if every attempt was malformed.
         """
         for _ in range(self._rules.max_retries + 1):
             try:
-                return self._dialogue.generate(self._history)
+                return self._dialogue.generate(self._history, judgement)
             except dialogue.MalformedReply:
                 continue
         return None
+
+    def _ends_silently(self, verdict: str) -> bool:
+        """Says whether a verdict ends the scenario with nothing for Mel to say.
+
+        Args:
+            verdict: The director's verdict.
+
+        Returns:
+            True if it reaches a threshold whose ending has no spoken line.
+        """
+        if verdict == "deescalated":
+            return (self._progress + 1 >= self._rules.progress_to_resolve
+                    and not self._rules.speak_reply_on_success)
+        return (self._strikes + 1 >= self._rules.strikes_allowed
+                and not self._rules.speak_reply_on_failure)
 
     def _score(self, verdict: str) -> str | None:
         """Counts a verdict towards the strike or progress thresholds.

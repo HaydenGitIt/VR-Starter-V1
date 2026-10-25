@@ -15,7 +15,7 @@ import uvicorn
 from fastapi import staticfiles
 
 from app import config, session
-from app.engines import dialogue, stt, tts
+from app.engines import dialogue, director, stt, tts
 
 _WEB_DIR = pathlib.Path(__file__).resolve().parent.parent / "web"
 
@@ -39,6 +39,7 @@ settings = config.load(_parse_args() if __name__ == "__main__" else ())
 speech_to_text = stt.build(settings.speech_to_text)
 dialogue_engine = dialogue.build(settings.dialogue)
 text_to_speech = tts.build(settings.text_to_speech)
+director_engine = director.build(settings.director)
 engines_ready = asyncio.Event()
 
 
@@ -52,6 +53,7 @@ def _warm_up() -> np.ndarray:
     speech_to_text.warm_up()
     dialogue_engine.warm_up()
     text_to_speech.warm_up()
+    director_engine.warm_up()
     return text_to_speech.synthesise(settings.scenario.opening_line)
 
 
@@ -129,7 +131,7 @@ async def conversation(websocket: fastapi.WebSocket) -> None:
     await engines_ready.wait()
     scenario = session.ScenarioSession(
         settings, speech_to_text, dialogue_engine, text_to_speech,
-        websocket.app.state.opening_audio)
+        websocket.app.state.opening_audio, director_engine)
     await websocket.send_json(scenario.ready_message())
 
     while True:

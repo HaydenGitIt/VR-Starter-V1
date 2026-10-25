@@ -43,6 +43,29 @@ The first start downloads the Whisper model (~150 MB for `base.en`) to
 `~/.cache/huggingface`. If CUDA gives trouble, set `device: cpu` and
 `compute_type: int8` under `speech_to_text` in `config.local.yaml`.
 
+### On a new machine
+
+Everything machine-specific lives outside git, so after cloning or pulling:
+
+1. Install [uv](https://docs.astral.sh/uv/) and [Ollama](https://ollama.com), and pull the
+   model Mel should use there, e.g. `ollama pull llama3:8b`.
+2. From `server/`, create the environment and install everything:
+
+   ```bash
+   uv venv --python 3.12 .venv
+   uv pip install --python .venv -r requirements.txt -r requirements-dev.txt -r requirements-notebooks.txt
+   uv pip install --python .venv -r requirements-cuda.txt
+   ```
+
+   The last line is for NVIDIA GPUs only.
+3. If Mel should be a different model than `config.yaml`'s, say so in `config.local.yaml`
+   (see [Dialogue model](#dialogue-model)). Data generation then uses the same model for Mel.
+4. For API models in data generation, save the keys as environment variables
+   (see `datagen/README.md`).
+5. Check it: `.venv\Scripts\python -m pytest` should pass every test.
+6. A trained director (`models/director/`) is not in git, since it's ~800 MB. Train one on
+   that machine (`datagen/README.md`), or copy the folder across.
+
 ### Dialogue model
 
 Needs [Ollama](https://ollama.com) running, with the model pulled
@@ -67,6 +90,24 @@ otherwise):
 ```bash
 .venv\Scripts\python check_dialogue.py --model llama3:8b
 ```
+
+### The director (Laya)
+
+By default Mel's dialogue model also judges each trainee line, in the tags it writes
+first. With a director, a separate decision model judges the line instead (a fine-tuned
+[Laya](https://huggingface.co/convaiinnovations/laya)), and Mel's model is told the
+verdict and only acts it out. The protocol and Unity are unchanged.
+
+```yaml
+# config.local.yaml
+director:
+  engine: laya    # or "none" for Mel's own tags
+```
+
+Training one is a few commands; see "Train the director" in `datagen/README.md`.
+Measured on the 6 GB dev PC: with Laya next to `qwen2.5:3b`, Whisper and Kokoro, the
+server used 5.9 GB of GPU memory, about the limit. Verdicts arrived ~0.4 s after each
+typed line, except an 11 s first turn.
 
 ### Speech synthesis
 

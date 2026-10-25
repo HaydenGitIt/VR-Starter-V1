@@ -73,6 +73,17 @@ dialogue:
     # pays a cold reload. -1 = until Ollama stops; `ollama stop MODEL` frees it.
     keep_alive: -1
 
+# Who decides whether the trainee's line reached Mel. "none": Mel's dialogue model judges
+# it in her own tags (the original design). "laya": a Laya checkpoint trained with
+# `python -m datagen.train_director` decides, and Mel's dialogue model only acts it out.
+# See datagen/README.md for training and switching it on.
+director:
+  engine: none
+  laya:
+    model: models/director    # checkpoint folder, relative to the server folder
+    device: null              # null = GPU if available
+    threshold: 0.5            # P(reached her) needed to count as reaching her
+
 text_to_speech:
   engine: kokoro
   kokoro:                 # outputs 24000 Hz: keep audio.playback_sample_rate at 24000

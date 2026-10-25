@@ -6,7 +6,7 @@ import pytest
 from fastapi import testclient
 
 from app import main
-from app.engines import dialogue, stt, tts
+from app.engines import dialogue, director, stt, tts
 
 
 def test_conversation_over_websocket(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -42,7 +42,8 @@ def test_conversation_over_websocket(monkeypatch: pytest.MonkeyPatch) -> None:
 class _Unreachable(dialogue.Dialogue):
     """A dialogue engine whose server is down."""
 
-    def generate(self, history: list[dict[str, str]]) -> dialogue.Reply:
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> dialogue.Reply:
         """Fails as if Ollama were not running."""
         raise ConnectionError("Failed to connect to Ollama.")
 

@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 
 from app import config, session
-from app.engines import dialogue, stt, tts
+from app.engines import dialogue, director, stt, tts
 from datagen import providers
 
 SERVER_DIR = pathlib.Path(__file__).resolve().parents[1]
@@ -43,8 +43,13 @@ class ProviderDialogue(dialogue.Dialogue):
         self._role = role
         self.attempts: list[dict[str, Any]] = []
 
-    def generate(self, history: list[dict[str, str]]) -> dialogue.Reply:
-        """See base class. Records every attempt in self.attempts."""
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> dialogue.Reply:
+        """See base class. Records every attempt in self.attempts.
+
+        Mel judges the line herself here, as in the original design: the data's labels
+        come from the graders, so ParentGame never passes a judgement.
+        """
         result = providers.complete(self._role, PARENT_PROMPT, history)
         self.attempts.append({"raw": result.text, "latency_s": result.latency_s,
                               "usage": result.usage})

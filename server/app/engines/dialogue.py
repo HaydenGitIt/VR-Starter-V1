@@ -1,4 +1,4 @@
-"""Dialogue engines: write Mel's line and judge the trainee's."""
+"""Dialogue engines: write Mel's line, and judge the trainee's unless a director does."""
 
 import abc
 import dataclasses
@@ -9,6 +9,7 @@ from collections.abc import Generator, Iterator
 import ollama
 
 from app import config
+from app.engines import director
 
 _SERVER_DIR = pathlib.Path(__file__).resolve().parents[2]
 
@@ -40,13 +41,16 @@ class Dialogue(abc.ABC):
         """Loads models. Called once before the server reports ready."""
 
     @abc.abstractmethod
-    def generate(self, history: list[dict[str, str]]) -> Reply:
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> Reply:
         """Starts Mel's reply to the trainee's latest line.
 
         Args:
             history: Chat messages, oldest first, each with "role" ("user"
                 for the trainee, "assistant" for Mel) and "content". Mel's
                 messages include their tags, e.g. "<neutral><agitated>...".
+            judgement: The director's verdict for Mel to act out, or None for
+                Mel to judge the line herself.
 
         Returns:
             The reply, once its tags are known.
@@ -61,10 +65,13 @@ class FakeDialogue(Dialogue):
 
     _PHRASES = ("sorry", "hear you", "listening")
 
-    def generate(self, history: list[dict[str, str]]) -> Reply:
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> Reply:
         """See base class."""
         line = history[-1]["content"]
-        if any(phrase in line.lower() for phrase in self._PHRASES):
+        reached = (judgement.verdict == "deescalated" if judgement
+                   else any(phrase in line.lower() for phrase in self._PHRASES))
+        if reached:
             return Reply("deescalated", "softening", _words("Okay. Thank you for saying that."))
         return Reply("neutral", "agitated", _words(f'"{line}" That doesn\'t help.'))
 
@@ -142,15 +149,26 @@ class OllamaDialogue(Dialogue):
             options={**self._options, "num_predict": 1},
             keep_alive=self._keep_alive)
 
-    def generate(self, history: list[dict[str, str]]) -> Reply:
-        """See base class."""
+    def generate(self, history: list[dict[str, str]],
+                 judgement: director.Judgement | None = None) -> Reply:
+        """See base class.
+
+        With a judgement, Mel's reply is pre-filled with "<verdict><" so the model writes
+        only her emotion and line, and the director's note tells it how to react. Both go
+        in this request only; the session's history keeps just what she said.
+        """
+        messages = [{"role": "system", "content": self._prompt}, *history]
+        raw = ""
+        if judgement:
+            raw = f"<{judgement.verdict}><"
+            messages += [{"role": "system", "content": judgement.note},
+                         {"role": "assistant", "content": raw}]
         stream = self._client.chat(
             model=self._model,
-            messages=[{"role": "system", "content": self._prompt}, *history],
+            messages=messages,
             options=self._options,
             keep_alive=self._keep_alive,
             stream=True)
-        raw = ""
         for chunk in stream:
             raw += chunk.message.content
             if match := self._TAGS.match(raw):
