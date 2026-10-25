@@ -2,14 +2,15 @@
 
 Usage, from the server folder (one process per teacher model, in parallel if you like):
 
-    .venv/Scripts/python -m datagen.generate --teacher llama3 --conversations 100
+    .venv/Scripts/python -m datagen.generate --conversations 100
     .venv/Scripts/python -m datagen.generate --teacher gemini-flash --conversations 100
     .venv/Scripts/python -m datagen.generate --teacher haiku-5-5 --conversations 100
 
 Each process writes its own file, named after --worker (default: the teacher preset), and
-skips ids it has already written, so running it again resumes. Mel defaults to the game's
-own local llama3:8b. Ollama answers one request at a time, so local Mel sets the pace
-(about 4.5 s per reply on the dev PC) however many processes you run.
+skips ids it has already written, so running it again resumes. Mel and the teacher default
+to the game's own model on this machine (config.yaml, then config.local.yaml). Ollama
+answers one request at a time, so local Mel sets the pace (about 4.5 s per reply for
+llama3:8b on the dev PC) however many processes you run.
 """
 
 import argparse
@@ -59,10 +60,11 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Generate synthetic conversations.")
     parser.add_argument("--conversations", type=int, required=True,
                         help="how many conversations this worker should hold in total")
-    parser.add_argument("--teacher", default="llama3",
-                        help=f"teacher preset (default llama3). One of: {', '.join(roles.PRESETS)}")
-    parser.add_argument("--parent", default="mel-llama3",
-                        help="Mel's preset (default mel-llama3, the game's own Mel)")
+    parser.add_argument("--teacher", default="teacher-game",
+                        help="teacher preset (default teacher-game: the game's model). "
+                             f"One of: {', '.join(roles.PRESETS)}")
+    parser.add_argument("--parent", default="mel-game",
+                        help="Mel's preset (default mel-game: the game's own Mel)")
     parser.add_argument("--worker", help="output file name and id prefix (default: the teacher "
                                          "preset); give each parallel process its own")
     parser.add_argument("--concurrency", type=int, default=4,

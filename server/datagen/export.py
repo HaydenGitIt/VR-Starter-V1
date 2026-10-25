@@ -26,30 +26,12 @@ import statistics
 from collections.abc import Iterator
 from typing import Any
 
+from app.engines import director
 from datagen import providers, roles, store
 from datagen.game import RULES
 
-DIRECTOR_QUESTIONS = {
-    "reached_her": {
-        "type": "noul",
-        "instructions": "A parent is upset about an $80/week childcare fee rise and an email "
-                        "nobody answered. Did the staff member's latest line respond to how she "
-                        "feels, rather than to the problem, the policy, the paperwork, or her "
-                        "behaviour?",
-        "criteria": {
-            "true": "Acknowledges or reflects her feelings, agrees her complaint is fair "
-                    "('That's not good enough'), owns a failure, gives her the floor, stays "
-                    "present, takes her anger without defending, names what it costs her, is "
-                    "warmly honest about limits, or offers to sit down. Short lines count.",
-            "false": "Bare filler ('Okay', 'Right'), claims to understand ('I understand'), "
-                     "explains the increase or points to the email, looks things up, promises a "
-                     "reversal, tells her to calm down, compares her to other families, or is "
-                     "garbled."}},
-    "repeated": {
-        "type": "noul",
-        "instructions": "Is the staff member's latest line essentially the same acknowledgement "
-                        "as their previous line, without moving anywhere?"},
-}
+# The director's own questions, so training sees what the game asks.
+DIRECTOR_QUESTIONS = director.QUESTIONS
 
 
 def soft_gold(p: float) -> dict[str, Any]:
@@ -107,8 +89,7 @@ def director_rows(conversations: list[dict[str, Any]], grades: list[dict[str, An
             if line_grades := votes.get((record["id"], t["turn"])):
                 reached = [g["verdict"] == "deescalated" for g in line_grades]
                 repeated = [g["category"] == "repeated" for g in line_grades]
-                yield ({"state": {"parent_said": mel, "staff_previously_said": previous,
-                                  "staff_now_says": t["transcript"]},
+                yield ({"state": director.state(mel, previous, t["transcript"]),
                         "questions": DIRECTOR_QUESTIONS,
                         "gold": {"reached_her": soft_gold(sum(reached) / len(reached)),
                                  "repeated": soft_gold(sum(repeated) / len(repeated))}},

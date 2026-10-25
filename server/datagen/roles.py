@@ -5,7 +5,9 @@ api_key_env, never stored here. rpm caps requests per minute within one process;
 tiers count every process that shares a key (e.g. a Gemini teacher and grader together).
 
 Model notes:
-- Mel stays on local llama3:8b by default: it is the game's own Mel.
+- The *-game presets use the model the game itself is configured with on this machine
+  (config.yaml, then config.local.yaml), so Mel matches the game, and a bigger model on
+  a bigger machine is picked up without code changes. They are the scripts' defaults.
 - Claude's API takes no temperature. Haiku 5.5 and Sonnet 5.5 always think, and thinking
   counts towards max_tokens, so they get room and low effort. Haiku 4.5 doesn't think
   unless asked, so the game's 55-token cap means 55 spoken tokens.
@@ -27,6 +29,7 @@ XAI_URL = "https://api.x.ai/v1"
 # Every request to one Ollama model must ask for the same num_ctx, or Ollama reloads the
 # model between requests. Mel's prompt alone is ~3,800 tokens, hence the game's 8192.
 _OLLAMA_SHARED = {"num_ctx": GAME["context_length"], "keep_alive": GAME["keep_alive"]}
+GAME_MODEL = GAME["model"]  # the game's Mel on this machine
 
 
 def _ollama(model: str, **options: Any) -> dict[str, Any]:
@@ -65,6 +68,10 @@ def _api(provider: str, model: str, base_url: str | None, api_key_env: str, rpm:
 _GEMINI_THINKING = {"extra_body": {"reasoning_effort": "low"}}
 
 PRESETS: dict[str, dict[str, Any]] = {
+    # --- The game's own model on this machine: Mel, and the defaults for the others ------
+    "mel-game": _ollama(GAME_MODEL, temperature=GAME["temperature"], max_tokens=GAME["max_tokens"]),
+    "teacher-game": _ollama(GAME_MODEL, temperature=1.0, max_tokens=60),
+    "grader-game": _ollama(GAME_MODEL, temperature=0.0, max_tokens=200),
     # --- Mel (the parent) ---------------------------------------------------------------
     "mel-llama3": _ollama("llama3:8b", temperature=GAME["temperature"], max_tokens=GAME["max_tokens"]),
     "mel-haiku-4-5": _api("anthropic", "claude-haiku-4-5", None, "ANTHROPIC_API_KEY", 50,
