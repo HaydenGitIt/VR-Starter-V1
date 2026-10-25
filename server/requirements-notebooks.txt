@@ -1,0 +1,8 @@
+# Extra packages for datagen/ and notebooks/ (synthetic conversation generation).
+# Install into the server's venv, after requirements.txt:
+#   uv pip install --python .venv -r requirements-notebooks.txt
+# The OpenAI-compatible provider uses httpx and the Ollama provider uses
+# ollama, both already in requirements.txt.
+jupyter
+ipykernel
+anthropic
