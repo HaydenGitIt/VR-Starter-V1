@@ -37,7 +37,7 @@ def _parse_args() -> list[str]:
 # Only read the command line when run as the server, not when imported.
 settings = config.load(_parse_args() if __name__ == "__main__" else ())
 speech_to_text = stt.build(settings.speech_to_text)
-dialogue_engine = dialogue.build(settings.dialogue)
+dialogue_engine = dialogue.build(settings.dialogue, director_mode=settings.director.engine != "none")
 text_to_speech = tts.build(settings.text_to_speech)
 director_engine = director.build(settings.director)
 engines_ready = asyncio.Event()

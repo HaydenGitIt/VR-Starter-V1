@@ -1,0 +1,45 @@
+# The director's prompts: what Laya is asked about each trainee line, and the note Mel's
+# model gets with Laya's verdict.
+#
+# Laya reads each question together with the line's state (Mel's last line, the staff
+# member's previous line, and the line being judged), so the instructions and criteria
+# below are its whole prompt. A "noul" question is a yes/no: Laya answers with P(true).
+#
+# After changing anything under questions, re-export and retrain:
+#   python -m datagen.export
+#   python -m datagen.train_director
+# A model trained on different wording is unreliable, and the server warns about one.
+# The notes can be changed at any time.
+
+questions:
+  reached_her:
+    type: noul
+    instructions: >-
+      A parent is upset about an $80/week childcare fee rise and an email nobody answered.
+      Did the staff member's latest line respond to how she feels, rather than to the
+      problem, the policy, the paperwork, or her behaviour?
+    criteria:
+      "true": >-
+        Acknowledges or reflects her feelings, agrees her complaint is fair ('That's not
+        good enough'), owns a failure, gives her the floor, stays present, takes her anger
+        without defending, names what it costs her, is warmly honest about limits, or
+        offers to sit down. Short lines count.
+      "false": >-
+        Bare filler ('Okay', 'Right'), claims to understand ('I understand'), explains the
+        increase or points to the email, looks things up, promises a reversal, tells her to
+        calm down, compares her to other families, or is garbled.
+  repeated:
+    type: noul
+    instructions: >-
+      Is the staff member's latest line essentially the same acknowledgement as their
+      previous line, without moving anywhere?
+
+# Sent to Mel's model with the verdict, so her line acts it out. Small models otherwise
+# follow the trainee's words more than the verdict.
+notes_to_mel:
+  deescalated: >-
+    Director's note (not spoken by anyone): their last line reached you. Let it land;
+    answer as someone who has just been heard, still worried about the money.
+  neutral: >-
+    Director's note (not spoken by anyone): their last line did not reach you. Do not thank
+    them or agree. Push back, or close off a little.

@@ -209,13 +209,19 @@ _ENGINES: dict[str, type[Dialogue]] = {
 }
 
 
-def build(settings: config.EngineSettings) -> Dialogue:
+def build(settings: config.EngineSettings, director_mode: bool = False) -> Dialogue:
     """Creates the engine named in the config.
 
     Args:
         settings: The dialogue config section.
+        director_mode: True when a director judges the trainee. Mel's prompt is then the
+            section's director_prompt, if it has one, instead of its prompt.
 
     Returns:
         The engine, constructed with the section's options.
     """
-    return _ENGINES[settings.engine](**settings.options)
+    options = dict(settings.options)
+    director_prompt = options.pop("director_prompt", None)
+    if director_mode and director_prompt:
+        options["prompt"] = director_prompt
+    return _ENGINES[settings.engine](**options)

@@ -44,6 +44,15 @@ def test_director_engine_is_chosen_in_config() -> None:
     assert isinstance(director.build(config.load(["director.engine=fake"]).director), director.FakeDirector)
 
 
+def test_director_mode_gives_mel_the_director_prompt() -> None:
+    """With a director, Mel gets the prompt without the judging rules; without, the original."""
+    settings = config.load(["dialogue.engine=ollama"]).dialogue
+    original = dialogue.build(settings)._prompt  # pylint: disable=protected-access
+    directed = dialogue.build(settings, director_mode=True)._prompt  # pylint: disable=protected-access
+    assert "WHAT REACHES YOU" in original and "WHAT REACHES YOU" not in directed
+    assert "SOMEONE ELSE JUDGES THEM" in directed
+
+
 def test_ollama_mel_acts_out_a_judgement(monkeypatch: pytest.MonkeyPatch) -> None:
     """The verdict is pre-filled and the note sent with the request, and the tags parse.
 

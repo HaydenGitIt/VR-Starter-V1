@@ -4,15 +4,18 @@ With a director, Mel's dialogue model no longer judges the trainee itself: the d
 decides the verdict, the session scores it, and the dialogue model is told the verdict and
 only acts it out. "none" keeps the original design, where Mel's own tags decide.
 
-The questions and the state built here are exactly what datagen exports for training, so
-a trained model sees in the game what it saw in training.
+The questions (prompts/director.yaml) and the state built here are exactly what datagen
+exports for training, so a trained model sees in the game what it saw in training.
 """
 
 import abc
 import dataclasses
+import json
 import pathlib
 import re
 from typing import Any
+
+import yaml
 
 from app import config
 
@@ -20,38 +23,10 @@ _SERVER_DIR = pathlib.Path(__file__).resolve().parents[2]
 _TAGS = re.compile(r"^\s*<[^>]*>\s*<[^>]*>")
 _START_TOKEN = re.compile(r"^\[[A-Z_]+\]$")  # e.g. [SCENARIO_START], the scenario's first message
 
-QUESTIONS = {
-    "reached_her": {
-        "type": "noul",
-        "instructions": "A parent is upset about an $80/week childcare fee rise and an email "
-                        "nobody answered. Did the staff member's latest line respond to how she "
-                        "feels, rather than to the problem, the policy, the paperwork, or her "
-                        "behaviour?",
-        "criteria": {
-            "true": "Acknowledges or reflects her feelings, agrees her complaint is fair "
-                    "('That's not good enough'), owns a failure, gives her the floor, stays "
-                    "present, takes her anger without defending, names what it costs her, is "
-                    "warmly honest about limits, or offers to sit down. Short lines count.",
-            "false": "Bare filler ('Okay', 'Right'), claims to understand ('I understand'), "
-                     "explains the increase or points to the email, looks things up, promises a "
-                     "reversal, tells her to calm down, compares her to other families, or is "
-                     "garbled."}},
-    "repeated": {
-        "type": "noul",
-        "instructions": "Is the staff member's latest line essentially the same acknowledgement "
-                        "as their previous line, without moving anywhere?"},
-}
-
-# Told to Mel's dialogue model with the forced verdict, so her line acts it out. Small
-# models otherwise follow the trainee's words rather than the verdict (measured; see
-# docs/plans/director-model-plan.md). Sent with the request only, never kept in history.
-NOTES = {
-    "deescalated": "Director's note (not spoken by anyone): their last line reached you. "
-                   "Let it land; answer as someone who has just been heard, still worried "
-                   "about the money.",
-    "neutral": "Director's note (not spoken by anyone): their last line did not reach you. "
-               "Do not thank them or agree. Push back, or close off a little.",
-}
+# The questions Laya is asked and the notes Mel gets, editable in prompts/director.yaml.
+_PROMPTS = yaml.safe_load((_SERVER_DIR / "prompts" / "director.yaml").read_text(encoding="utf-8"))
+QUESTIONS: dict[str, Any] = _PROMPTS["questions"]
+NOTES: dict[str, str] = _PROMPTS["notes_to_mel"]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -175,6 +150,11 @@ class LayaDirector(Director):
         """See base class."""
         import laya  # pylint: disable=import-outside-toplevel  (only when this engine is used)
 
+        trained_on = pathlib.Path(self._model) / "questions.json"
+        if trained_on.exists() and json.loads(trained_on.read_text(encoding="utf-8")) != QUESTIONS:
+            print("WARNING: the director was trained on different questions than "
+                  "prompts/director.yaml has now, so its verdicts are unreliable. Retrain it: "
+                  "python -m datagen.export, then python -m datagen.train_director.", flush=True)
         self._agent = laya.load(self._model, device=self._device)
         self._agent.predict(state("Hello.", "", "Hello."), QUESTIONS)  # first call is slow
 

@@ -58,6 +58,9 @@ dialogue:
   ollama:
     model: llama3:8b
     prompt: prompts/parent_system_prompt.txt
+    # Used instead when a director judges the trainee (director.engine below): the same
+    # Mel without the rules for judging them, since her verdict is decided for her.
+    director_prompt: prompts/parent_system_prompt_director.txt
     temperature: 0.8          # 0.8 measured at 100% format compliance on llama3:8b
     # Hard cap on reply length. At 90, llama3 gave 4-5 sentence replies (~9s
     # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.

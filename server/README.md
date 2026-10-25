@@ -26,6 +26,9 @@ There are two ways to talk to it:
 See [`docs/plans/python-server-implementation-plan.md`](../docs/plans/python-server-implementation-plan.md)
 for the full design and build-order plan.
 
+**Generating training data, grading it, and training the director (Laya):** see
+[`datagen/README.md`](datagen/README.md).
+
 ## Quick start
 
 Needs Python 3.12 (the Kokoro TTS package does not support 3.13 yet).
@@ -95,8 +98,9 @@ otherwise):
 
 By default Mel's dialogue model also judges each trainee line, in the tags it writes
 first. With a director, a separate decision model judges the line instead (a fine-tuned
-[Laya](https://huggingface.co/convaiinnovations/laya)), and Mel's model is told the
-verdict and only acts it out. The protocol and Unity are unchanged.
+[Laya](https://huggingface.co/convaiinnovations/laya)). Mel's model is then told the
+verdict and only acts it out, using `prompts/parent_system_prompt_director.txt`. The
+protocol and Unity are unchanged.
 
 ```yaml
 # config.local.yaml
