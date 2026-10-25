@@ -56,6 +56,10 @@ dialogue:
     model: qwen2.5:3b
 ```
 
+The model stays loaded in Ollama after the server stops (`keep_alive: -1`),
+so restarts are instant. To free the GPU memory, run `ollama stop llama3:8b`
+(or whichever model you use).
+
 Before trusting a new model or prompt, check its tag format and verdicts
 against known-correct answers (it uses the configured model unless told
 otherwise):

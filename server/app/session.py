@@ -92,6 +92,11 @@ class ScenarioSession:
             "progress_to_resolve": self._rules.progress_to_resolve,
         }
 
+    @property
+    def ended(self) -> bool:
+        """True once the scenario has reached an ending."""
+        return self._outcome is not None
+
     def handle_command(self, command: dict[str, Any]) -> Iterator[Message]:
         """Handles one JSON command from the client.
 
@@ -223,7 +228,7 @@ class ScenarioSession:
         if not self._outcome and self._turn >= self._rules.max_turns:
             self._outcome = "disengaged"
             yield {"type": "ending", "outcome": "disengaged"}
-        yield {"type": "turn_end", "ended": self._outcome is not None}
+        yield {"type": "turn_end", "ended": self.ended}
 
     def _generate(self) -> dialogue.Reply | None:
         """Asks the dialogue engine for a reply, retrying malformed ones.

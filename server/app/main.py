@@ -146,6 +146,9 @@ async def conversation(websocket: fastapi.WebSocket) -> None:
             return
         except Exception as e:  # pylint: disable=broad-except
             await websocket.send_json({"type": "error", "message": str(e)})
+            # End the turn anyway, as the original server did, or Unity waits
+            # for turn_end forever with the microphone closed.
+            await websocket.send_json({"type": "turn_end", "ended": scenario.ended})
 
 
 async def _send_all(

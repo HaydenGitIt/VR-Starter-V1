@@ -99,6 +99,8 @@ class OllamaDialogue(Dialogue):
         temperature: float = 0.8,
         max_tokens: int = 55,
         tag_deadline_chars: int = 60,
+        context_length: int = 8192,
+        keep_alive: float | str = -1,
         host: str | None = None,
     ) -> None:
         """Reads the prompt; the model loads in warm_up().
@@ -110,11 +112,19 @@ class OllamaDialogue(Dialogue):
             max_tokens: Hard cap on reply length (and so on latency).
             tag_deadline_chars: If this much arrives with no valid tags,
                 the reply is rejected rather than salvaged.
+            context_length: Tokens the model can see (Ollama's num_ctx). If
+                the conversation outgrows it, Ollama silently drops the
+                oldest messages.
+            keep_alive: How long Ollama keeps the model loaded after each
+                request: -1 for as long as Ollama runs, or e.g. "30m".
             host: Ollama URL, or None for the default (localhost:11434).
         """
         self._model = model
         self._prompt = (_SERVER_DIR / prompt).read_text(encoding="utf-8")
-        self._options = {"temperature": temperature, "num_predict": max_tokens}
+        # Every request must ask for the same num_ctx, or Ollama reloads the model.
+        self._options = {
+            "temperature": temperature, "num_predict": max_tokens, "num_ctx": context_length}
+        self._keep_alive = keep_alive
         self._tag_deadline_chars = tag_deadline_chars
         self._client = ollama.Client(host)
 
@@ -129,7 +139,8 @@ class OllamaDialogue(Dialogue):
             model=self._model,
             messages=[{"role": "system", "content": self._prompt},
                       {"role": "user", "content": "Hello."}],
-            options={**self._options, "num_predict": 1})
+            options={**self._options, "num_predict": 1},
+            keep_alive=self._keep_alive)
 
     def generate(self, history: list[dict[str, str]]) -> Reply:
         """See base class."""
@@ -137,6 +148,7 @@ class OllamaDialogue(Dialogue):
             model=self._model,
             messages=[{"role": "system", "content": self._prompt}, *history],
             options=self._options,
+            keep_alive=self._keep_alive,
             stream=True)
         raw = ""
         for chunk in stream:

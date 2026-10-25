@@ -63,6 +63,15 @@ dialogue:
     # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.
     max_tokens: 55
     tag_deadline_chars: 60    # no valid tags by now -> reject and retry
+    # The prompt alone is ~3,800 tokens. Ollama's default context (4096 on the
+    # dev PC) fills up around turn 6-7, then it silently drops the oldest
+    # messages (the opening line first). 8192 fits a full run; it costs GPU
+    # memory (~0.5 GB more than 4096 for llama3:8b).
+    context_length: 8192
+    # How long Ollama keeps the model loaded after each request. Its default
+    # (5m) unloads it while the server waits for a trainee, so the next turn
+    # pays a cold reload. -1 = until Ollama stops; `ollama stop MODEL` frees it.
+    keep_alive: -1
 
 text_to_speech:
   engine: kokoro
