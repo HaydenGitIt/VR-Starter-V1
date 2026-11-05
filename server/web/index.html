@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversation Test</title>
+  <style>
+    :root { --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --panel: #fff; --line: #ddd;
+            --trainee: #1f5fbf; --parent: #8a3b12; --good: #217a3c; --bad: #b3261e; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #161616; --fg: #e8e8e8; --muted: #999; --panel: #1f1f1f; --line: #333;
+              --trainee: #7fb0ff; --parent: #f0a070; --good: #6fd08c; --bad: #ff8a80; }
+    }
+    body { margin: 0 auto; max-width: 760px; padding: 16px; background: var(--bg);
+           color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    #status, #counters { color: var(--muted); margin-bottom: 8px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    #line { flex: 1; min-width: 0; padding: 8px; }
+    button, input { font: inherit; }
+    #log { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+           padding: 12px; height: 60vh; overflow-y: auto; }
+    #log div { margin: 4px 0; overflow-wrap: anywhere; }
+    .trainee { color: var(--trainee); }
+    .parent { color: var(--parent); }
+    .meta { color: var(--muted); font-size: 13px; }
+    .good { color: var(--good); font-weight: 600; }
+    .bad { color: var(--bad); font-weight: 600; }
+    pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Conversation test</h1>
+  <div id="status">Checking server…</div>
+  <div id="counters"></div>
+  <div class="row">
+    <button id="begin">Begin</button>
+    <button id="reset">Reset</button>
+    <button id="summary">Summary</button>
+    <button id="connect">Reconnect</button>
+  </div>
+  <form id="form" class="row">
+    <button type="button" id="talk">Talk</button>
+    <input id="line" placeholder="…or type a trainee line" autocomplete="off">
+    <button>Send</button>
+  </form>
+  <div id="log"></div>
+  <script src="app.js"></script>
+</body>
+</html>

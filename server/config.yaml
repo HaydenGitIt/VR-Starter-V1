@@ -1,0 +1,95 @@
+# Server settings. Field names mirror Assets/Config/PipelineConfig.asset so
+# the two are easy to compare - they are kept in sync by hand.
+#
+# Machine-specific changes (e.g. a smaller model on a dev PC) go in
+# config.local.yaml next to this file. It is gitignored and merged on top
+# of this one, so you only list the keys you want to change.
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+audio:
+  capture_sample_rate: 16000
+  playback_sample_rate: 24000
+  sentence_gap_ms: 90           # silence between spoken sentences
+
+# Values and reasoning carried over from the original DeescalationServer.
+scenario:
+  max_turns: 8
+  strikes_allowed: 3            # turns that fail to reach her before she leaves
+  # Main teaching dial. 4 ended the scenario in four turns, too short to
+  # teach anything. progress + (strikes - 1) must be <= max_turns.
+  progress_to_resolve: 6
+  # Whether Mel's last line is spoken before the ending Timeline. On a third
+  # strike it is cut before any audio exists; on success she finishes.
+  # Running out of turns always lets her finish (the turn is already spoken).
+  speak_reply_on_failure: false
+  speak_reply_on_success: true
+  # First "user" message, so the model sees a conversation that Mel opens.
+  start_token: "[SCENARIO_START]"
+  # Fixed so every trainee gets the same stimulus with no generation delay.
+  opening_line: "Eighty dollars. Centre fees have gone up eighty dollars. I can't afford that! What are you going to do about this?"
+  opening_verdict: neutral
+  opening_emotion: agitated
+  # Spoken when the model fails to produce valid tags max_retries + 1 times.
+  # Uses a turn but is never a strike.
+  fallback_line: "Sorry, what was that? I didn't catch you."
+  fallback_verdict: neutral
+  fallback_emotion: agitated
+  max_retries: 1
+  # Drop a trailing fragment cut off by the token cap, unless it is all
+  # she said.
+  drop_truncated_fragment: true
+
+# Each engine section names the engine to use, then holds an options block
+# per engine (passed to that engine's constructor). Switching `engine:`
+# picks a different block, so engines never see each other's options.
+# `fake` engines need no models; they exist for testing the protocol.
+speech_to_text:
+  engine: whisper
+  whisper:
+    model: base.en
+    device: cuda          # "cpu" if CUDA gives trouble
+    compute_type: float16 # "int8" on CPU
+
+dialogue:
+  engine: ollama
+  ollama:
+    model: llama3:8b
+    prompt: prompts/parent_system_prompt.txt
+    # Used instead when a director judges the trainee (director.engine below): the same
+    # Mel without the rules for judging them, since her verdict is decided for her.
+    director_prompt: prompts/parent_system_prompt_director.txt
+    temperature: 0.8          # 0.8 measured at 100% format compliance on llama3:8b
+    # Hard cap on reply length. At 90, llama3 gave 4-5 sentence replies (~9s
+    # audio, ~3s latency). Pairs with scenario.drop_truncated_fragment.
+    max_tokens: 55
+    tag_deadline_chars: 60    # no valid tags by now -> reject and retry
+    # The prompt alone is ~3,800 tokens. Ollama's default context (4096 on the
+    # dev PC) fills up around turn 6-7, then it silently drops the oldest
+    # messages (the opening line first). 8192 fits a full run; it costs GPU
+    # memory (~0.5 GB more than 4096 for llama3:8b).
+    context_length: 8192
+    # How long Ollama keeps the model loaded after each request. Its default
+    # (5m) unloads it while the server waits for a trainee, so the next turn
+    # pays a cold reload. -1 = until Ollama stops; `ollama stop MODEL` frees it.
+    keep_alive: -1
+
+# Who decides whether the trainee's line reached Mel. "none": Mel's dialogue model judges
+# it in her own tags (the original design). "laya": a Laya checkpoint trained with
+# `python -m datagen.train_director` decides, and Mel's dialogue model only acts it out.
+# See datagen/README.md for training and switching it on.
+director:
+  engine: none
+  laya:
+    model: models/director    # checkpoint folder, relative to the server folder
+    device: null              # null = GPU if available
+    threshold: 0.5            # P(reached her) needed to count as reaching her
+
+text_to_speech:
+  engine: kokoro
+  kokoro:                 # outputs 24000 Hz: keep audio.playback_sample_rate at 24000
+    voice: af_heart       # af_/am_ American, bf_/bm_ British
+    speed: 1.0
+    device: null          # null = GPU if PyTorch has CUDA, else CPU

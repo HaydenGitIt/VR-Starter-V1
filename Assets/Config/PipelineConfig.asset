@@ -36,3 +36,4 @@ MonoBehaviour:
   maxUtteranceLength: 30
   maxTurns: 8
   strikesAllowed: 3
+  progressToResolve: 6
