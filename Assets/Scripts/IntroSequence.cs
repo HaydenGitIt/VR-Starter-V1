@@ -56,6 +56,12 @@ public class IntroSequence : MonoBehaviour
     [Tooltip("Seconds to wait after the video ends before the final panel appears.")]
     [SerializeField] private float pauseAfterVideo = 0.5f;
 
+    [Tooltip("How long to wait for playback to actually start before giving up and " +
+             "moving on. A clip Unity cannot decode never raises its end-of-video " +
+             "event, so without this the trainee would be stranded on a blank panel " +
+             "with no way forward.")]
+    [SerializeField] private float videoStartTimeout = 8f;
+
     [Header("Stage 3 - Final panel")]
     [SerializeField] private GameObject finalPanel;
 
@@ -121,6 +127,15 @@ public class IntroSequence : MonoBehaviour
 
     private void Start()
     {
+        // Complain loudly about anything unassigned.
+        //
+        // A missing reference here fails SILENTLY and looks like the script
+        // misbehaving: panels that should be hidden stay visible, and a
+        // VideoPlayer left on Play On Awake starts by itself. Replacing a
+        // script file can lose these assignments if the file's GUID changes,
+        // so it is worth checking every run rather than assuming.
+        ValidateReferences();
+
         // Everything except the first stage starts hidden, regardless of how
         // the scene was left in the editor.
         SetActive(tutorialPlayerUI, false);
@@ -141,6 +156,64 @@ public class IntroSequence : MonoBehaviour
         }
 
         SetStage(Stage.Cards);
+    }
+
+    /// <summary>
+    /// Reports anything the sequence needs but does not have.
+    /// </summary>
+    private void ValidateReferences()
+    {
+        if (cardPanel == null)
+        {
+            Debug.LogError("[IntroSequence] Card Panel is not assigned. The cards cannot be " +
+                           "hidden when the video starts.", this);
+        }
+
+        if (tutorialPlayerUI == null)
+        {
+            Debug.LogError("[IntroSequence] Tutorial Player UI is not assigned. It will stay " +
+                           "visible from the start instead of appearing after the cards.", this);
+        }
+
+        if (videoPlayer == null)
+        {
+            Debug.LogError("[IntroSequence] Video Player is not assigned. The sequence will " +
+                           "skip straight past the video to the final panel.", this);
+        }
+        else if (videoPlayer.playOnAwake)
+        {
+            // This script decides when the video starts. Play On Awake makes it
+            // start on its own, before the trainee has read a single card.
+            Debug.LogWarning("[IntroSequence] The VideoPlayer has Play On Awake ticked. " +
+                             "Turning it off - this script controls when the video starts.", this);
+
+            videoPlayer.playOnAwake = false;
+            videoPlayer.Stop();
+        }
+
+        if (videoPlayer != null)
+        {
+            CheckVideoAudio();
+        }
+
+        if (finalPanel == null)
+        {
+            Debug.LogError("[IntroSequence] Final Panel is not assigned. There will be nothing " +
+                           "to show after the video, and no way into the scenario.", this);
+        }
+
+        if (cards != null && cards.Length > 0 && externalCardCount > 0)
+        {
+            Debug.LogWarning($"[IntroSequence] Both the Cards array ({cards.Length}) and " +
+                             $"External Card Count ({externalCardCount}) are set. The Cards " +
+                             "array wins; set External Card Count to 0 to avoid confusion.", this);
+        }
+
+        if ((cards == null || cards.Length == 0) && externalCardCount <= 0)
+        {
+            Debug.LogWarning("[IntroSequence] No cards configured. The first Continue press " +
+                             "will go straight to the video.", this);
+        }
     }
 
     // ---------------------------------------------------------------
@@ -220,6 +293,47 @@ public class IntroSequence : MonoBehaviour
     ///
     /// Wire the LAST card's Continue button here if the UI pack pages itself.
     /// </summary>
+    /// <summary>
+    /// Warns about the two settings that make a tutorial video play silently.
+    ///
+    /// WHY THIS MATTERS MORE IN VR THAN ON A MONITOR:
+    /// "Direct" output sends audio past Unity to the operating system's
+    /// default device, which over Quest Link is usually the laptop speakers,
+    /// not the headset. The video then plays perfectly, with the narration
+    /// coming out of a machine sitting on a desk the trainee cannot hear.
+    /// Routing through an AudioSource puts it through Unity's AudioListener,
+    /// which lives on the XR camera and therefore follows the trainee.
+    /// </summary>
+    private void CheckVideoAudio()
+    {
+        if (videoPlayer.audioOutputMode == VideoAudioOutputMode.None)
+        {
+            Debug.LogWarning("[IntroSequence] The VideoPlayer's Audio Output Mode is None, " +
+                             "so the tutorial will play silently. Set it to Audio Source and " +
+                             "assign an AudioSource.", this);
+            return;
+        }
+
+        if (videoPlayer.audioOutputMode == VideoAudioOutputMode.Direct)
+        {
+            Debug.LogWarning("[IntroSequence] The VideoPlayer's Audio Output Mode is Direct. " +
+                             "Over Quest Link that sends sound to Windows' default device " +
+                             "rather than the headset. Set it to Audio Source instead.", this);
+            return;
+        }
+
+        if (videoPlayer.GetTargetAudioSource(0) == null)
+        {
+            Debug.LogWarning("[IntroSequence] The VideoPlayer is set to Audio Source output " +
+                             "but no AudioSource is assigned to track 0, so it will be silent.",
+                             this);
+        }
+        else if (videoPlayer.GetDirectAudioVolume(0) <= 0f && videoPlayer.controlledAudioTrackCount > 0)
+        {
+            Debug.LogWarning("[IntroSequence] Track 0's volume on the VideoPlayer is zero.", this);
+        }
+    }
+
     public void ShowVideo()
     {
         if (CurrentStage == Stage.Video) return;
@@ -249,7 +363,85 @@ public class IntroSequence : MonoBehaviour
         videoFinished = false;
         videoPlayer.loopPointReached += HandleVideoFinished;
 
+        // LISTEN FOR DECODE FAILURES.
+        //
+        // VideoPlayer does not throw and does not log when it cannot play a
+        // clip - it reports through this event and nothing else. With no
+        // handler, an unsupported codec looks exactly like a video that is
+        // simply taking a moment: a blank panel, a silent Console, and no
+        // way to tell the two apart.
+        videoPlayer.errorReceived += HandleVideoError;
+
+        StartCoroutine(StartPlayback());
+    }
+
+    /// <summary>
+    /// Starts the video one frame after the panel appears.
+    ///
+    /// WHY NOT JUST CALL Play() ABOVE:
+    /// SetActive(true) runs Awake and OnEnable on the panel's children at
+    /// once, but their Start() is deferred until just before the next Update.
+    /// The panel's own play/pause controller sets its initial state in
+    /// Start() - and the initial state of a play/pause button is "paused".
+    /// Calling Play() before that runs means being paused a frame later,
+    /// which is exactly what the diagnostics showed: prepared, but paused,
+    /// holding at frame 0.
+    /// </summary>
+    private IEnumerator StartPlayback()
+    {
+        yield return null;
+
         videoPlayer.Play();
+
+        StartCoroutine(WatchForPlaybackStart());
+    }
+
+    /// <summary>
+    /// Gives up if playback never begins.
+    ///
+    /// Play() returns immediately whether or not the clip can be decoded, and
+    /// loopPointReached only ever fires for a video that actually reached its
+    /// end. A clip Unity cannot handle therefore leaves the sequence waiting
+    /// on an event that will never come. For a trainee mid-session that is a
+    /// dead end, so after the timeout we say so plainly and move on.
+    /// </summary>
+    private IEnumerator WatchForPlaybackStart()
+    {
+        float deadline = Time.time + Mathf.Max(1f, videoStartTimeout);
+
+        while (Time.time < deadline)
+        {
+            if (videoFinished) yield break;          // already done or errored
+            if (videoPlayer.isPlaying) yield break;  // away cleanly
+
+            // If something paused us before playback ever got going, start
+            // again. This only runs until the video is actually playing, so
+            // a trainee who deliberately pauses later stays paused.
+            if (videoPlayer.isPaused)
+            {
+                videoPlayer.Play();
+            }
+
+            yield return null;
+        }
+
+        Debug.LogError(
+            "[IntroSequence] The video never started playing. Unity could not decode it, " +
+            "or the clip is empty.\n" +
+            "Re-encode as H.264 video + AAC audio in an .mp4, or select the clip in the " +
+            "Project window and tick Transcode.\n" +
+            "Moving on to the final panel so the trainee is not stuck here.", this);
+
+        HandleVideoFinished(videoPlayer);
+    }
+
+    private void HandleVideoError(VideoPlayer source, string message)
+    {
+        Debug.LogError($"[IntroSequence] VideoPlayer error: {message}", this);
+
+        // Do not strand the trainee. Whatever went wrong with the clip, the
+        // rest of the introduction still works.
+        HandleVideoFinished(source);
     }
 
     private void HandleVideoFinished(VideoPlayer source)
@@ -258,6 +450,7 @@ public class IntroSequence : MonoBehaviour
         videoFinished = true;
 
         source.loopPointReached -= HandleVideoFinished;
+        source.errorReceived -= HandleVideoError;
 
         StartCoroutine(ShowFinalPanelAfter(pauseAfterVideo));
     }

@@ -1,0 +1,14 @@
+# Optional: Qwen3-TTS, for a Mel whose delivery changes with her emotion
+# (config.yaml text_to_speech.engine: qwen). Kokoro needs none of this.
+#
+# Install AFTER requirements.txt and requirements-cuda.txt, so the CUDA
+# build of torch is already in place and pip has no reason to fetch another:
+#   uv pip install --python .venv -r requirements-qwen.txt
+#
+# Then check that build survived, because qwen-tts can pull its own:
+#   python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+# If that prints False, reinstall requirements-cuda.txt. Whisper and Kokoro
+# both depend on it, so a replaced torch shows up far from here.
+#
+# The model itself (several GB) downloads on the first warm_up, not now.
+qwen-tts

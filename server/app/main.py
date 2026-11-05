@@ -54,7 +54,8 @@ def _warm_up() -> np.ndarray:
     dialogue_engine.warm_up()
     text_to_speech.warm_up()
     director_engine.warm_up()
-    return text_to_speech.synthesise(settings.scenario.opening_line)
+    return text_to_speech.synthesise(
+        settings.scenario.opening_line, settings.scenario.opening_emotion)
 
 
 @contextlib.asynccontextmanager
