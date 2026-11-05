@@ -43,3 +43,19 @@ def test_qwen_tolerates_instructions_without_a_fallback() -> None:
     """A config that forgot the "" entry returns no instruction, not an error."""
     engine = tts.QwenTextToSpeech(instructions={"agitated": "fast"})
     assert engine._instruction_for("calm") == ""
+
+
+def test_faster_qwen_behaves_like_qwen_apart_from_loading() -> None:
+    """The CUDA-graph engine differs only in how the model is loaded.
+
+    Worth asserting: the two are meant to be a fair A/B, so any divergence
+    in instruction handling or trimming would make their measurements
+    incomparable without it being obvious why.
+    """
+    options = {"instructions": {"agitated": "fast", "": "plain"}}
+    faster = tts.FasterQwenTextToSpeech(**options)
+
+    assert isinstance(faster, tts.QwenTextToSpeech)
+    assert faster._instruction_for("agitated") == "fast"
+    assert faster._instruction_for("unknown") == "plain"
+    assert faster.synthesise is tts.QwenTextToSpeech.synthesise.__get__(faster).__func__

@@ -187,10 +187,17 @@ class QwenTextToSpeech(TextToSpeech):
             device_map=self._device,
             dtype=getattr(torch, self._dtype, torch.float32))
 
-        # Throwaway synthesis, which also reveals the real output rate. The
-        # server resamples nothing, so a mismatch would reach the headset as
-        # a Mel whose voice is the wrong pitch and speed - obvious to hear
-        # but easy to misread as a bad model, so say it plainly at startup.
+        self._warm_and_check()
+
+    def _warm_and_check(self) -> None:
+        """Synthesises one throwaway line and checks the output rate.
+
+        Two jobs in one call. The first pays any one-off cost now rather
+        than on the trainee's first turn. The second catches a rate
+        mismatch at startup: the server resamples nothing, so it would
+        otherwise reach the headset as a Mel whose voice is the wrong pitch
+        and speed - obvious to hear, but easy to misread as a bad model.
+        """
         _, rate = self._generate("Warming up.", self._instructions.get("", ""))
         if rate != self._expected_sample_rate:
             print(f"WARNING: {self._model_id} outputs {rate} Hz but "
@@ -249,6 +256,87 @@ class QwenTextToSpeech(TextToSpeech):
 # Lead with the speaker's age and sex: strong emotion prompts are known to
 # drift the voice, and stating who is speaking first holds it steady.
 # Overridable per deployment from the qwen options block in config.yaml.
+class FasterQwenTextToSpeech(QwenTextToSpeech):
+    """The same Qwen3-TTS models, loaded through faster-qwen3-tts.
+
+    THE REASON FOR A SECOND QWEN ENGINE:
+    The stock library generates at roughly 2x real time on a laptop RTX
+    5090 - slower than playback, so streaming synthesis falls further
+    behind with every sentence. The GPU is only ~26% busy while that
+    happens, and the 0.6B model is no faster than the 1.7B, which together
+    say the cost is not compute: it is the ~500 small kernel launches per
+    decode step, which barely change with model size.
+
+    faster-qwen3-tts captures that decode step as a CUDA graph, replaying
+    it as one launch. Its author measures ~5x on an RTX 4090. Nothing else
+    is required - no vLLM, no Triton, no FlashAttention, no compiler - so
+    unlike the alternatives it costs no new infrastructure on Windows.
+
+    Everything below the loader is inherited: same call, same instruction
+    map, same trimming. Only the import and the construction differ, which
+    is also what makes the two engines a fair A/B.
+    """
+
+    def __init__(
+        self,
+        model: str = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        speaker: str = "Vivian",
+        language: str = "English",
+        device: str = "cuda",
+        dtype: str = "bfloat16",
+        attn_implementation: str = "sdpa",
+        instructions: dict[str, str] | None = None,
+        expected_sample_rate: int = 24000,
+        silence_threshold: float = 0.01,
+        edge_padding_ms: int = 20,
+    ) -> None:
+        """Stores settings; the model loads in warm_up().
+
+        Args:
+            model: As for QwenTextToSpeech.
+            speaker: As for QwenTextToSpeech.
+            language: As for QwenTextToSpeech.
+            device: Torch device. Note this takes "cuda", not "cuda:0" -
+                a different argument from the stock library's device_map.
+            dtype: Torch dtype name; this loader accepts it as a string.
+            attn_implementation: "sdpa" needs nothing extra installed.
+            instructions: As for QwenTextToSpeech.
+            expected_sample_rate: As for QwenTextToSpeech.
+            silence_threshold: As for QwenTextToSpeech.
+            edge_padding_ms: As for QwenTextToSpeech.
+        """
+        super().__init__(
+            model=model,
+            speaker=speaker,
+            language=language,
+            device=device,
+            dtype=dtype,
+            instructions=instructions,
+            expected_sample_rate=expected_sample_rate,
+            silence_threshold=silence_threshold,
+            edge_padding_ms=edge_padding_ms)
+
+        self._attn_implementation = attn_implementation
+
+    def warm_up(self) -> None:
+        """See base class.
+
+        The throwaway synthesis matters more here than for other engines:
+        it is the call that captures the CUDA graph, so skipping it would
+        move that cost onto the trainee's first turn.
+        """
+        # Imported here so fake-only setups never load PyTorch.
+        from faster_qwen3_tts import FasterQwen3TTS  # pylint: disable=import-outside-toplevel
+
+        self._model = FasterQwen3TTS.from_pretrained(
+            self._model_id,
+            device=self._device,
+            dtype=self._dtype,
+            attn_implementation=self._attn_implementation)
+
+        self._warm_and_check()
+
+
 _DEFAULT_INSTRUCTIONS: dict[str, str] = {
     "agitated": "A woman in her forties, tense and frustrated, speaks quickly with "
                 "clipped, pressured energy.",
@@ -286,6 +374,7 @@ _ENGINES: dict[str, type[TextToSpeech]] = {
     "fake": FakeTextToSpeech,
     "kokoro": KokoroTextToSpeech,
     "qwen": QwenTextToSpeech,
+    "faster-qwen": FasterQwenTextToSpeech,
 }
 
 
