@@ -3,3 +3,5 @@ __pycache__/
 config.local.yaml
 # Trained director checkpoints (python -m datagen.train_director): ~800 MB each.
 models/
+# WAVs written by check_tts.py, for listening to, not for keeping.
+samples/tts_check/

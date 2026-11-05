@@ -166,7 +166,7 @@ class ScenarioSession:
         self._remember(rules.opening_verdict, rules.opening_emotion, rules.opening_line)
 
         if self._opening_audio is None:
-            self._opening_audio = self._tts.synthesise(rules.opening_line)
+            self._opening_audio = self._tts.synthesise(rules.opening_line, rules.opening_emotion)
         yield {"type": "tags", "verdict": rules.opening_verdict, "emotion": rules.opening_emotion}
         yield audio_frame(self._opening_audio)
         yield {"type": "reply", "text": rules.opening_line}
@@ -333,7 +333,9 @@ class ScenarioSession:
         gap = np.zeros(self._settings.sentence_gap_ms * self._settings.playback_sample_rate // 1000,
                        dtype="<f4").tobytes()
         for sentence in sentences:
-            audio = self._tts.synthesise(sentence)
+            # Mel's emotion tag arrives before any of her dialogue, so an
+            # engine that can act on it already knows how to say this line.
+            audio = self._tts.synthesise(sentence, self._emotion)
             if audio.size == 0:
                 continue
             if spoken:

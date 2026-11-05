@@ -129,6 +129,25 @@ the trainee finishes, 3.2 GB of GPU memory in use. `llama3:8b` does not
 fully fit alongside the other engines on 6 GB, so it partly runs on the
 CPU and first audio takes ~1.6-2s; it needs ~8 GB to run at full speed.
 
+#### Emotional delivery (Qwen3-TTS)
+
+Kokoro always sounds the same. Mel's emotional temperature is the signal
+the trainee is learning to read, so `text_to_speech.engine: qwen` uses
+Qwen3-TTS CustomVoice instead, which takes a plain-English instruction per
+sentence. Her emotion tag arrives before any of her dialogue, so the right
+instruction is always known by the time a sentence is spoken.
+
+```bash
+uv pip install --python .venv -r requirements-qwen.txt
+```
+
+Edit `text_to_speech.qwen.instructions` in `config.yaml` to change how each
+emotion sounds, and `speaker` to change the voice itself. Fidelity across
+emotions is uneven, so those instructions want listening tests rather than
+assumption. Much larger than Kokoro: several GB downloaded on first start
+and a 1.7B model resident on the GPU, so check it fits alongside the
+dialogue model before switching a low-memory machine over.
+
 ### Sending recorded speech
 
 On the test page, click **Talk**, speak, then click **Stop & send** — the

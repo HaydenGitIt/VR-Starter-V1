@@ -93,3 +93,32 @@ text_to_speech:
     voice: af_heart       # af_/am_ American, bf_/bm_ British
     speed: 1.0
     device: null          # null = GPU if PyTorch has CUDA, else CPU
+  # Qwen3-TTS CustomVoice. Unlike Kokoro it varies delivery per sentence
+  # from Mel's emotion tag, which is the signal the trainee is reading.
+  # Needs `uv pip install --python .venv -U qwen-tts`; first run downloads
+  # several GB. Must be a CustomVoice variant - Base and VoiceDesign expose
+  # different methods.
+  qwen:
+    # A 0.6B CustomVoice also exists, if the 1.7B is too slow or too large
+    # to sit beside the dialogue model. Whether its delivery varies as well
+    # is a listening test, not a given: compare with check_tts.py.
+    model: Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+    # Female presets: Vivian, Serena, Ono_Anna, Sohee.
+    # Male presets:   Uncle_Fu, Dylan, Eric, Ryan, Aiden.
+    # Listen to a couple before settling: instructions shape delivery, but
+    # the speaker sets the voice and no instruction overrides that.
+    speaker: Vivian
+    language: English     # "Auto" to detect, but Mel's lines are short
+    device: cuda:0        # "cpu" to rule the GPU out while debugging
+    dtype: bfloat16       # "float32" on CPU
+    expected_sample_rate: 24000   # warn at startup if the model disagrees
+    # Emotion tag -> how the line is delivered. These need listening tests,
+    # not assumption: fidelity across emotions is uneven. "" is the
+    # fallback, used for an unknown tag. Leading with who is speaking holds
+    # the voice steady; strong emotion prompts otherwise drift it.
+    instructions:
+      agitated: "A woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
+      distressed: "A woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
+      softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
+      calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
+      "": "A woman in her forties speaks at a moderate pace."

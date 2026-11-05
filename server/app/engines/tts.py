@@ -14,11 +14,14 @@ class TextToSpeech(abc.ABC):
         """Loads models. Called once before the server reports ready."""
 
     @abc.abstractmethod
-    def synthesise(self, text: str) -> np.ndarray:
+    def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
         """Speaks one sentence.
 
         Args:
             text: The sentence to speak.
+            emotion: Mel's current emotion tag, e.g. "agitated". Engines
+                that cannot vary their delivery ignore it. Empty when the
+                caller has none, which must never be an error.
 
         Returns:
             Mono float32 audio at the configured playback rate, with no
@@ -38,7 +41,7 @@ class FakeTextToSpeech(TextToSpeech):
         """
         self._sample_rate = sample_rate
 
-    def synthesise(self, text: str) -> np.ndarray:
+    def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
         """See base class."""
         t = np.arange(int(self._sample_rate * 0.3)) / self._sample_rate
         return (0.2 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
@@ -88,8 +91,8 @@ class KokoroTextToSpeech(TextToSpeech):
             lang_code=self._voice[0], repo_id="hexgrad/Kokoro-82M", device=self._device)
         self.synthesise("Warming up.")
 
-    def synthesise(self, text: str) -> np.ndarray:
-        """See base class."""
+    def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
+        """See base class. Kokoro has no delivery control, so emotion is ignored."""
         pieces = [
             np.asarray(audio.detach().cpu() if hasattr(audio, "detach") else audio,
                        dtype=np.float32)
@@ -112,15 +115,177 @@ class KokoroTextToSpeech(TextToSpeech):
         Returns:
             The clip without its silent ends (unchanged if entirely silent).
         """
-        loud = np.flatnonzero(np.abs(audio) > self._silence_threshold)
-        if loud.size == 0:
+        return trim_silence(audio, self._silence_threshold, self._padding)
+
+
+class QwenTextToSpeech(TextToSpeech):
+    """Qwen3-TTS CustomVoice: a preset speaker, steered per sentence.
+
+    THE REASON FOR THIS ENGINE:
+    Kokoro's delivery is flat. In a de-escalation trainer the parent's
+    emotional temperature is the signal the trainee is learning to read, and
+    a calm-sounding agitated parent removes it. CustomVoice takes a
+    free-form English instruction describing how a line should be delivered,
+    and because Mel's model emits her emotion tag BEFORE any dialogue, the
+    right instruction is always known by the time a sentence is synthesised.
+
+    Like Kokoro it runs in-process: no separate server and no container.
+    """
+
+    def __init__(
+        self,
+        model: str = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        speaker: str = "Vivian",
+        language: str = "English",
+        device: str = "cuda:0",
+        dtype: str = "bfloat16",
+        instructions: dict[str, str] | None = None,
+        expected_sample_rate: int = 24000,
+        silence_threshold: float = 0.01,
+        edge_padding_ms: int = 20,
+    ) -> None:
+        """Stores settings; the model loads in warm_up().
+
+        Args:
+            model: Hugging Face model id. Must be a CustomVoice variant; the
+                Base and VoiceDesign variants expose different methods.
+            speaker: One of the model's presets. Female: Vivian, Serena,
+                Ono_Anna, Sohee. Male: Uncle_Fu, Dylan, Eric, Ryan, Aiden.
+                The instruction shapes delivery; the speaker sets the voice
+                itself, and no instruction will talk one into being another.
+            language: Named rather than left to detection, because Mel's
+                lines are short and clipped when she is agitated, which is
+                the least that detection has to work with.
+            device: Torch device, e.g. "cuda:0" or "cpu".
+            dtype: Torch dtype name. Use "float32" on CPU.
+            instructions: Emotion tag -> delivery instruction. Missing tags
+                and the empty tag fall back to the "" entry.
+            expected_sample_rate: What audio.playback_sample_rate is set to.
+                Checked against the model's real output in warm_up().
+            silence_threshold: Amplitude below which audio counts as silence.
+            edge_padding_ms: Silence kept at each end so nothing clips.
+        """
+        self._model_id = model
+        self._speaker = speaker
+        self._language = language
+        self._device = device
+        self._dtype = dtype
+        self._instructions = dict(instructions or _DEFAULT_INSTRUCTIONS)
+        self._expected_sample_rate = expected_sample_rate
+        self._silence_threshold = silence_threshold
+        self._padding = edge_padding_ms * expected_sample_rate // 1000
+        self._model = None
+
+    def warm_up(self) -> None:
+        """See base class. Downloads several GB on a cold first run."""
+        # Imported here so fake-only setups never load PyTorch.
+        import torch  # pylint: disable=import-outside-toplevel
+        from qwen_tts import Qwen3TTSModel  # pylint: disable=import-outside-toplevel
+
+        self._model = Qwen3TTSModel.from_pretrained(
+            self._model_id,
+            device_map=self._device,
+            dtype=getattr(torch, self._dtype, torch.float32))
+
+        # Throwaway synthesis, which also reveals the real output rate. The
+        # server resamples nothing, so a mismatch would reach the headset as
+        # a Mel whose voice is the wrong pitch and speed - obvious to hear
+        # but easy to misread as a bad model, so say it plainly at startup.
+        _, rate = self._generate("Warming up.", self._instructions.get("", ""))
+        if rate != self._expected_sample_rate:
+            print(f"WARNING: {self._model_id} outputs {rate} Hz but "
+                  f"audio.playback_sample_rate is {self._expected_sample_rate}. "
+                  "Set them to match, in config.yaml and PipelineConfig.asset.",
+                  flush=True)
+
+    def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
+        """See base class."""
+        audio, _ = self._generate(text, self._instruction_for(emotion))
+        if audio.size == 0:
             return audio
-        return audio[max(0, loud[0] - self._padding):loud[-1] + 1 + self._padding]
+        return trim_silence(audio, self._silence_threshold, self._padding)
+
+    def _generate(self, text: str, instruct: str) -> tuple[np.ndarray, int]:
+        """Calls the model once.
+
+        Args:
+            text: The sentence to speak.
+            instruct: How to deliver it. Omitted from the call when empty,
+                because an explicit None is not the same as no instruction.
+
+        Returns:
+            The mono float32 audio and the rate the model produced it at.
+        """
+        options = {"text": text, "language": self._language, "speaker": self._speaker}
+        if instruct:
+            options["instruct"] = instruct
+
+        # Every generate_* method on this model is built for batching, so it
+        # returns a LIST of waveforms even for one line. Treating that list
+        # as the audio does not raise - it just produces something unplayable.
+        waveforms, rate = self._model.generate_custom_voice(**options)
+        if waveforms is None or len(waveforms) == 0:
+            return np.zeros(0, dtype=np.float32), rate
+
+        audio = np.asarray(
+            waveforms[0].detach().cpu() if hasattr(waveforms[0], "detach") else waveforms[0],
+            dtype=np.float32)
+        # Mel is one person in one place; her position in the room is
+        # Unity's business, so mix any stereo down rather than send two ears.
+        return (audio.mean(axis=1) if audio.ndim > 1 else audio), rate
+
+    def _instruction_for(self, emotion: str) -> str:
+        """Turns an emotion tag into a delivery instruction.
+
+        Args:
+            emotion: Mel's current emotion tag, possibly empty or unknown.
+
+        Returns:
+            The instruction for that tag, or the fallback.
+        """
+        return self._instructions.get(emotion, self._instructions.get("", ""))
+
+
+# Lead with the speaker's age and sex: strong emotion prompts are known to
+# drift the voice, and stating who is speaking first holds it steady.
+# Overridable per deployment from the qwen options block in config.yaml.
+_DEFAULT_INSTRUCTIONS: dict[str, str] = {
+    "agitated": "A woman in her forties, tense and frustrated, speaks quickly with "
+                "clipped, pressured energy.",
+    "distressed": "A woman in her forties, upset and close to tears, speaks quietly "
+                  "with a wavering, unsteady voice.",
+    "softening": "A woman in her forties, still guarded but beginning to relax, speaks "
+                 "at a moderate pace with lowered energy.",
+    "calm": "A woman in her forties speaks calmly and evenly at a moderate pace with "
+            "warm, settled energy.",
+    "": "A woman in her forties speaks at a moderate pace.",
+}
+
+
+def trim_silence(audio: np.ndarray, threshold: float, padding: int) -> np.ndarray:
+    """Removes an engine's own leading and trailing silence, keeping a little.
+
+    Engines pad every clip, so joined sentences would get double-length
+    pauses. The server adds one controlled gap between sentences instead.
+
+    Args:
+        audio: One synthesised clip.
+        threshold: Amplitude below which a sample counts as silence.
+        padding: Samples of silence to keep at each end so nothing clips.
+
+    Returns:
+        The clip without its silent ends (unchanged if entirely silent).
+    """
+    loud = np.flatnonzero(np.abs(audio) > threshold)
+    if loud.size == 0:
+        return audio
+    return audio[max(0, loud[0] - padding):loud[-1] + 1 + padding]
 
 
 _ENGINES: dict[str, type[TextToSpeech]] = {
     "fake": FakeTextToSpeech,
     "kokoro": KokoroTextToSpeech,
+    "qwen": QwenTextToSpeech,
 }
 
 
