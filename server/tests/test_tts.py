@@ -58,4 +58,8 @@ def test_faster_qwen_behaves_like_qwen_apart_from_loading() -> None:
     assert isinstance(faster, tts.QwenTextToSpeech)
     assert faster._instruction_for("agitated") == "fast"
     assert faster._instruction_for("unknown") == "plain"
-    assert faster.synthesise is tts.QwenTextToSpeech.synthesise.__get__(faster).__func__
+
+    # Compare the class attributes, not a bound method: an unoverridden
+    # method is literally the same function object on both classes.
+    assert tts.FasterQwenTextToSpeech.synthesise is tts.QwenTextToSpeech.synthesise
+    assert tts.FasterQwenTextToSpeech._generate is tts.QwenTextToSpeech._generate
