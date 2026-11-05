@@ -93,6 +93,37 @@ text_to_speech:
     voice: af_heart       # af_/am_ American, bf_/bm_ British
     speed: 1.0
     device: null          # null = GPU if PyTorch has CUDA, else CPU
+  # Voxi: an expressive Kokoro fine-tune with a voicepack per emotion.
+  # Runs at Kokoro's speed because it is Kokoro, so unlike qwen it can
+  # keep ahead of playback. Needs `uv pip install --python .venv
+  # huggingface-hub` (already present) and downloads ~400 MB on first use.
+  #
+  # TRADE-OFFS, both worth hearing before trusting it: eight fixed
+  # emotions rather than free-form instructions, and a British-English
+  # voice trained on ~1.9 hours of one speaker, where kokoro above is
+  # American. The fine-tune publishes no evaluation.
+  voxi:
+    # The model card and its own usage snippet disagree on the repo. If
+    # the download 404s, try Joshuant/voxi-tts instead.
+    repo_id: IOTEverythin/voxi-tts
+    speed: 1.0
+    device: null          # null = GPU if PyTorch has CUDA, else CPU
+    # Mel's four states onto Voxi's eight packs. A first guess, not a
+    # finding. The eight are: bf_neutral, bf_happy, bf_sad, bf_angry,
+    # bf_excited, bf_disgust, bf_sarcastic, bf_surprised.
+    #
+    # Two things to listen for. "angry" is the nearest pack to agitated,
+    # but Mel is upset about money, not aggressive, and she never
+    # escalates - if it reads as shouting, try bf_surprised or bf_sad.
+    # And softening and calm both land on neutral, flattening the half of
+    # the arc where the trainee's work shows; try bf_sad for softening if
+    # the two need separating.
+    voicepacks:
+      agitated: bf_angry
+      distressed: bf_sad
+      softening: bf_neutral
+      calm: bf_neutral
+      "": bf_neutral
   # Qwen3-TTS CustomVoice. Unlike Kokoro it varies delivery per sentence
   # from Mel's emotion tag, which is the signal the trainee is reading.
   # Needs `uv pip install --python .venv -U qwen-tts`; first run downloads

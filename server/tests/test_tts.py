@@ -20,6 +20,30 @@ def test_kokoro_leaves_all_silent_clip_alone() -> None:
     assert tts.KokoroTextToSpeech()._trim(silence).size == 1000
 
 
+def test_voxi_picks_a_voicepack_per_emotion_and_falls_back() -> None:
+    """Each tag maps to a pack; unknown and empty tags get the fallback.
+
+    Mel's model writes these tags, so an unconfigured one is always
+    possible. Losing her delivery for a turn is acceptable; raising
+    mid-scenario is not.
+    """
+    engine = tts.VoxiTextToSpeech(
+        voicepacks={"agitated": "bf_angry", "calm": "bf_neutral", "": "bf_neutral"})
+    engine._packs = {"bf_angry": "ANGRY", "bf_neutral": "NEUTRAL"}
+
+    assert engine._pack_for("agitated") == "ANGRY"
+    assert engine._pack_for("calm") == "NEUTRAL"
+    assert engine._pack_for("furious") == "NEUTRAL"
+    assert engine._pack_for("") == "NEUTRAL"
+
+
+def test_voxi_defaults_cover_every_emotion_the_scenario_produces() -> None:
+    """The shipped mapping has an entry for each of Mel's states."""
+    for tag in ("agitated", "distressed", "softening", "calm", ""):
+        assert tag in tts.VOXI_VOICEPACKS, tag
+        assert tts.VOXI_VOICEPACKS[tag].startswith("bf_")
+
+
 def test_qwen_picks_the_instruction_for_the_emotion() -> None:
     """Each tag gets its own delivery instruction."""
     engine = tts.QwenTextToSpeech(instructions={"agitated": "fast", "calm": "slow", "": "plain"})

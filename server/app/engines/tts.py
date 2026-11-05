@@ -88,15 +88,29 @@ class KokoroTextToSpeech(TextToSpeech):
 
         # The voice prefix's first letter is Kokoro's language code.
         self._pipeline = kokoro.KPipeline(
-            lang_code=self._voice[0], repo_id="hexgrad/Kokoro-82M", device=self._device)
+            lang_code=self._voice[0], repo_id=_KOKORO_REPO, device=self._device)
         self.synthesise("Warming up.")
 
     def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
         """See base class. Kokoro has no delivery control, so emotion is ignored."""
+        return self._run_pipeline(text, self._voice)
+
+    def _run_pipeline(self, text: str, voice: object) -> np.ndarray:
+        """Speaks one sentence through the Kokoro pipeline.
+
+        Args:
+            text: The sentence to speak.
+            voice: What to pass as the pipeline's `voice`. Stock Kokoro
+                names a built-in voice with a string; a fine-tune can hand
+                over a loaded style tensor instead.
+
+        Returns:
+            The audio, trimmed, or empty if the pipeline produced nothing.
+        """
         pieces = [
             np.asarray(audio.detach().cpu() if hasattr(audio, "detach") else audio,
                        dtype=np.float32)
-            for _, _, audio in self._pipeline(text, voice=self._voice, speed=self._speed)
+            for _, _, audio in self._pipeline(text, voice=voice, speed=self._speed)
             if audio is not None
         ]
         if not pieces:
@@ -116,6 +130,125 @@ class KokoroTextToSpeech(TextToSpeech):
             The clip without its silent ends (unchanged if entirely silent).
         """
         return trim_silence(audio, self._silence_threshold, self._padding)
+
+
+class VoxiTextToSpeech(KokoroTextToSpeech):
+    """Voxi, an expressive Kokoro fine-tune with one voicepack per emotion.
+
+    THE REASON FOR THIS ENGINE:
+    Qwen3-TTS sounds far better and varies its delivery, but runs at ~2x
+    real time here, which is the wrong side of the line where streaming
+    synthesis can keep up with playback. Voxi runs at Kokoro's speed,
+    because it IS Kokoro - the same 82M architecture, fine-tuned on an
+    expressive corpus, with a style tensor per emotion.
+
+    WHAT YOU GIVE UP, WHICH IS NOT SMALL:
+    Eight fixed emotions instead of free-form instructions, trained on
+    about 1.9 hours of one British-English speaker. Mel's four states do
+    not map cleanly onto those eight - see VOXI_VOICEPACKS below - and
+    the fine-tune publishes no evaluation. Treat the mapping as a first
+    guess to be fixed by ear, which is why it lives in config.yaml.
+    """
+
+    def __init__(
+        self,
+        repo_id: str = "IOTEverythin/voxi-tts",
+        weights_file: str = "kokoro_voxi_v1.pth",
+        config_file: str = "config.json",
+        lang_code: str = "b",
+        voicepacks: dict[str, str] | None = None,
+        speed: float = 1.0,
+        device: str | None = None,
+        silence_threshold: float = 0.01,
+        edge_padding_ms: int = 20,
+    ) -> None:
+        """Stores settings; weights and voicepacks download in warm_up().
+
+        Args:
+            repo_id: Hugging Face repo holding the fine-tune. The model
+                card and its own usage snippet disagree on this - the page
+                is IOTEverythin/voxi-tts, the code says Joshuant/voxi-tts -
+                so if the download 404s, try the other one.
+            weights_file: Kokoro-format weights inside that repo.
+            config_file: Kokoro config inside that repo.
+            lang_code: Kokoro language code. "b" is British English, which
+                is what this fine-tune was trained on; its voicepacks are
+                all named bf_*. Note the stock engine uses an American
+                voice, so switching engines also switches accent.
+            voicepacks: Emotion tag -> voicepack name, without the path or
+                extension. Missing tags fall back to the "" entry.
+            speed: Speaking rate; 1.0 is normal.
+            device: "cuda", "cpu", or None to use the GPU when available.
+            silence_threshold: Amplitude below which audio counts as silence.
+            edge_padding_ms: Silence kept at each end so nothing clips.
+        """
+        super().__init__(
+            speed=speed,
+            device=device,
+            silence_threshold=silence_threshold,
+            edge_padding_ms=edge_padding_ms)
+
+        self._repo_id = repo_id
+        self._weights_file = weights_file
+        self._config_file = config_file
+        self._lang_code = lang_code
+        self._voicepacks = dict(voicepacks or VOXI_VOICEPACKS)
+
+        # Emotion tag -> the loaded style tensor, filled in warm_up().
+        self._packs: dict[str, object] = {}
+
+    def warm_up(self) -> None:
+        """See base class. Downloads the fine-tune and every voicepack."""
+        # Imported here so fake-only setups never load PyTorch.
+        import torch  # pylint: disable=import-outside-toplevel
+        import kokoro  # pylint: disable=import-outside-toplevel
+        from huggingface_hub import hf_hub_download  # pylint: disable=import-outside-toplevel
+
+        config_path = hf_hub_download(self._repo_id, self._config_file)
+        weights_path = hf_hub_download(self._repo_id, self._weights_file)
+
+        # The architecture is stock Kokoro; only the weights are Voxi's,
+        # which is why repo_id here still points at the base model.
+        model = kokoro.KModel(
+            repo_id=_KOKORO_REPO, config=config_path, model=weights_path).eval()
+
+        # device is passed only when set, so the default path is exactly
+        # the call the model card documents. KPipeline takes a device, and
+        # it takes a model, but nothing says it takes both - and a model
+        # built here already knows where it lives.
+        options: dict[str, object] = {
+            "lang_code": self._lang_code, "repo_id": _KOKORO_REPO, "model": model}
+        if self._device is not None:
+            options["device"] = self._device
+
+        self._pipeline = kokoro.KPipeline(**options)
+
+        # Load every pack up front. Fetching one mid-scenario would stall
+        # the turn on a network call the moment Mel's mood changed.
+        for name in sorted(set(self._voicepacks.values())):
+            path = hf_hub_download(self._repo_id, f"voices/{name}.pt")
+            self._packs[name] = torch.load(path, map_location="cpu", weights_only=True)
+
+        self.synthesise("Warming up.")
+
+    def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
+        """See base class."""
+        return self._run_pipeline(text, self._pack_for(emotion))
+
+    def _pack_for(self, emotion: str) -> object:
+        """Picks the style tensor for an emotion tag.
+
+        Args:
+            emotion: Mel's current emotion tag, possibly empty or unknown.
+
+        Returns:
+            The loaded voicepack for that tag, or the fallback. Never
+            raises: Mel's model writes these tags, so an unconfigured one
+            is always possible, and losing her delivery for a turn is far
+            better than losing her voice.
+        """
+        name = self._voicepacks.get(emotion) or self._voicepacks.get("")
+        return self._packs.get(name)
 
 
 class QwenTextToSpeech(TextToSpeech):
@@ -337,6 +470,30 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
         self._warm_and_check()
 
 
+_KOKORO_REPO = "hexgrad/Kokoro-82M"
+
+
+# Mel's four states onto Voxi's eight voicepacks. This is a first guess,
+# not a finding, and two things about it deserve a listening test:
+#
+#   "angry" is the only pack near agitated, but Mel is upset about money,
+#   not aggressive, and the scenario's rule is that she never escalates.
+#   If angry reads as shouting, try "surprised" or "sad" instead.
+#
+#   softening and calm both land on neutral, which flattens the half of
+#   the arc where the trainee's work shows. Try softening -> sad if the
+#   two need separating, since Voxi's sad is subdued rather than weepy.
+#
+# Overridable from the voxi options block in config.yaml.
+VOXI_VOICEPACKS: dict[str, str] = {
+    "agitated": "bf_angry",
+    "distressed": "bf_sad",
+    "softening": "bf_neutral",
+    "calm": "bf_neutral",
+    "": "bf_neutral",
+}
+
+
 _DEFAULT_INSTRUCTIONS: dict[str, str] = {
     "agitated": "A woman in her forties, tense and frustrated, speaks quickly with "
                 "clipped, pressured energy.",
@@ -373,6 +530,7 @@ def trim_silence(audio: np.ndarray, threshold: float, padding: int) -> np.ndarra
 _ENGINES: dict[str, type[TextToSpeech]] = {
     "fake": FakeTextToSpeech,
     "kokoro": KokoroTextToSpeech,
+    "voxi": VoxiTextToSpeech,
     "qwen": QwenTextToSpeech,
     "faster-qwen": FasterQwenTextToSpeech,
 }
