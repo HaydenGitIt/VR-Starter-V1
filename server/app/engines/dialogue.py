@@ -166,11 +166,13 @@ class OllamaDialogue(Dialogue):
         """See base class.
 
         The notes go in this request only; the session's history keeps just what she said.
+        They go at the end of the system prompt, never between turns: on llama3:8b a system
+        message after the trainee's line left her silent on half her turns, and one before
+        it made her repeat her last line word for word on over half.
         """
         notes = [note for note in (state_note, judgement.note if judgement else "") if note]
-        messages = [{"role": "system", "content": self._prompt}, *history]
-        if notes:
-            messages.append({"role": "system", "content": " ".join(notes)})
+        system = "\n\n".join([self._prompt, " ".join(notes)]) if notes else self._prompt
+        messages = [{"role": "system", "content": system}, *history]
         stream = self._client.chat(
             model=self._model,
             messages=messages,

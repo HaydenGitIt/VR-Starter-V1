@@ -79,8 +79,9 @@ def test_ollama_mel_acts_out_a_judgement(monkeypatch: pytest.MonkeyPatch) -> Non
     reply = engine.generate([{"role": "user", "content": "Okay."}], "You feel agitated.",
                             director.judgement("neutral", 0.1))
     assert (reply.verdict, "".join(reply.text)) == ("neutral", "Is that it?")
-    assert requests[0]["messages"][-1] == {
-        "role": "system", "content": f"You feel agitated. {director.NOTES['neutral']}"}
+    system, *talk = requests[0]["messages"]
+    assert system["content"].endswith(f"You feel agitated. {director.NOTES['neutral']}")
+    assert talk == [{"role": "user", "content": "Okay."}]  # nothing between the turns
 
 
 def test_laya_refuses_to_start_without_its_checkpoint() -> None:
