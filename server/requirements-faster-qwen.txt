@@ -1,0 +1,10 @@
+# Trial of faster-qwen3-tts, in its own venv so the server's .venv is untouched:
+#   uv venv --python 3.12 .venv-tts
+#   uv pip install --python .venv-tts -r requirements-faster-qwen.txt
+#   uv pip install --python .venv-tts -r requirements-cuda.txt
+#   .venv-tts\Scripts\python check_faster_qwen.py
+#
+# Only transformers 5.15.1 and 5.16.1 load its speech codec, though the package
+# accepts anything up to 6: from 5.17.0 it fails with "MimiConfig has no rope_theta".
+faster-qwen3-tts==0.5.4
+transformers==5.16.1

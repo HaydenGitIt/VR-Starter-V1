@@ -5,6 +5,9 @@ numpy
 faster-whisper
 ollama
 kokoro
+# Pinned: Laya, Kokoro and Qwen all sit on this, and newer releases have broken them.
+# 5.18.0 is what the server is tested on; see requirements-faster-qwen.txt before changing it.
+transformers==5.18.0
 # The director (config.yaml director.engine: laya) and its training.
 laya
 # English model for Kokoro's phonemiser; otherwise downloaded on first run.
