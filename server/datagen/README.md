@@ -65,11 +65,12 @@ isn't tied to a workspace also needs `ANTHROPIC_WORKSPACE_ID`.
   less of the model.
 - Training saves to `models/director/` and prints how often Laya, and Mel's own tags, agree
   with the graders on the test lines. `--report-only` prints that again without training.
-- **Switch it on** in `config.local.yaml`, then restart the server. `engine: none` turns it off.
+- It's on by default. To turn it off, set `engine: none` in `config.local.yaml`, then restart
+  the server.
 
   ```yaml
   director:
-    engine: laya
+    engine: none
   ```
 
 **How Laya is prompted.** For each line it gets:
@@ -87,9 +88,9 @@ re-export and retrain; the server warns if a model was trained on other wording.
 **How Mel is prompted with the director on.** She only acts out the verdict:
 
 - Her prompt is `prompts/parent_system_prompt_director.txt`: her usual prompt without the
-  rules for judging the trainee.
-- Her reply is pre-filled with the verdict tag.
-- She gets the matching note from `notes_to_mel` in `prompts/director.yaml`.
+  rules for judging the trainee, and she writes no tags.
+- She gets the matching note from `notes_to_mel` in `prompts/director.yaml`, and one from
+  `state_notes` saying how she feels now.
 
 ## Where things are
 

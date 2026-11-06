@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+from app import mel_state
+
 _SERVER_DIR = pathlib.Path(__file__).resolve().parent.parent
 _BASE_FILE = _SERVER_DIR / "config.yaml"
 _LOCAL_FILE = _SERVER_DIR / "config.local.yaml"
@@ -31,16 +33,14 @@ class Scenario:
 
     max_turns: int
     strikes_allowed: int
-    progress_to_resolve: int
+    levels: list[str]
     speak_reply_on_failure: bool
     speak_reply_on_success: bool
     start_token: str
     opening_line: str
     opening_verdict: str
-    opening_emotion: str
     fallback_line: str
     fallback_verdict: str
-    fallback_emotion: str
     max_retries: int
     drop_truncated_fragment: bool
 
@@ -48,16 +48,29 @@ class Scenario:
         """Rejects rules that make the scenario impossible to pass.
 
         Raises:
-            ValueError: If the thresholds cannot all be satisfied.
+            ValueError: If the thresholds cannot all be satisfied, or a level is not an
+                Emotion.
         """
-        if self.strikes_allowed < 1 or self.progress_to_resolve < 1:
-            raise ValueError("strikes_allowed and progress_to_resolve must be at least 1.")
+        if self.strikes_allowed < 1 or len(self.levels) < 2:
+            raise ValueError("strikes_allowed must be at least 1, with at least 2 levels.")
+        for name in self.levels:
+            mel_state.Emotion(name)
         # A trainee using every allowed miss still needs turns left to succeed.
-        needed = self.progress_to_resolve + self.strikes_allowed - 1
+        needed = self.steps_to_resolve + self.strikes_allowed - 1
         if needed > self.max_turns:
             raise ValueError(
                 f"Using all {self.strikes_allowed - 1} allowed misses, a trainee needs "
                 f"{needed} turns to succeed, but max_turns is {self.max_turns}.")
+
+    @property
+    def steps_to_resolve(self) -> int:
+        """Deescalations needed to resolve the scenario."""
+        return len(self.levels) - 1
+
+    @property
+    def opening_emotion(self) -> str:
+        """How Mel feels at the start."""
+        return self.levels[0]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -70,6 +83,8 @@ class Settings:
         capture_sample_rate: Rate of incoming trainee audio, in Hz.
         playback_sample_rate: Rate of outgoing synthesised audio, in Hz.
         sentence_gap_ms: Silence inserted between spoken sentences.
+        chunk_sentences: True to speak each sentence as it completes, False to speak
+            Mel's whole reply in one go.
         scenario: Scenario rules and fixed lines.
         speech_to_text: Which STT engine to use.
         dialogue: Which dialogue engine to use.
@@ -88,6 +103,7 @@ class Settings:
     text_to_speech: EngineSettings
     director: EngineSettings = dataclasses.field(
         default_factory=lambda: EngineSettings(engine="none", options={}))
+    chunk_sentences: bool = True
 
 
 def load(overrides: Sequence[str] = ()) -> Settings:
@@ -126,7 +142,8 @@ def load(overrides: Sequence[str] = ()) -> Settings:
         speech_to_text=_engine(raw["speech_to_text"]),
         dialogue=_engine(raw["dialogue"]),
         text_to_speech=_engine(raw["text_to_speech"]),
-        director=_engine(raw.get("director") or {"engine": "none"}),
+        director=_engine(raw["director"]),
+        chunk_sentences=raw["audio"]["chunk_sentences"],
     )
 
 

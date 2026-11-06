@@ -96,19 +96,35 @@ otherwise):
 
 ### The director (Laya)
 
-By default Mel's dialogue model also judges each trainee line, in the tags it writes
-first. With a director, a separate decision model judges the line instead (a fine-tuned
-[Laya](https://huggingface.co/convaiinnovations/laya)). Mel's model is then told the
-verdict and only acts it out, using `prompts/parent_system_prompt_director.txt`. The
-protocol and Unity are unchanged.
+By default a fine-tuned [Laya](https://huggingface.co/convaiinnovations/laya) judges each
+trainee line. Mel's model is told the verdict and only acts it out, using
+`prompts/parent_system_prompt_director.txt`.
+
+The server stops at startup if Laya's checkpoint is missing. To run without it, say so:
 
 ```yaml
 # config.local.yaml
 director:
-  engine: laya    # or "none" for Mel's own tags
+  engine: none    # Mel's own model judges, in a verdict tag
 ```
 
-Training one is a few commands; see "Train the director" in `datagen/README.md`.
+### Mel's state
+
+`app/mel_state.py` tracks Mel's level and strikes from each verdict, whichever model
+judges. Her emotion always comes from her level, never from a model.
+
+| Verdict | Level | Strike |
+|---|---|---|
+| `deescalated` | one step towards resolved | no |
+| `neutral` | stays | yes |
+| `escalated` | one step back, stopping at her starting level | yes |
+
+To change the path, edit `scenario.levels` in `config.yaml`. To add a verdict or emotion,
+add it to the enums in `app/mel_state.py` and its note in `prompts/director.yaml`, and add
+an emotion to `ParentEmotion` in Unity too. Keep `progressToResolve` in
+`Assets/Config/PipelineConfig.asset` at the number of levels minus one.
+
+Training Laya is a few commands; see "Train the director" in `datagen/README.md`.
 Measured on the 6 GB dev PC: with Laya next to `qwen2.5:3b`, Whisper and Kokoro, the
 server used 5.9 GB of GPU memory, about the limit. Verdicts arrived ~0.4 s after each
 typed line, except an 11 s first turn.
@@ -134,12 +150,16 @@ CPU and first audio takes ~1.6-2s; it needs ~8 GB to run at full speed.
 Kokoro always sounds the same. Mel's emotional temperature is the signal
 the trainee is learning to read, so `text_to_speech.engine: qwen` uses
 Qwen3-TTS CustomVoice instead, which takes a plain-English instruction per
-sentence. Her emotion tag arrives before any of her dialogue, so the right
+sentence. Her emotion is settled before any of her dialogue, so the right
 instruction is always known by the time a sentence is spoken.
 
 ```bash
 uv pip install --python .venv -r requirements-qwen.txt
 ```
+
+Two settings trade steadiness against speed: `audio.chunk_sentences: false` speaks
+Mel's whole reply in one go instead of sentence by sentence, and
+`text_to_speech.faster-qwen.temperature` lowers the randomness of her delivery.
 
 Edit `text_to_speech.qwen.instructions` in `config.yaml` to change how each
 emotion sounds, and `speaker` to change the voice itself. Fidelity across

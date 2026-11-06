@@ -68,7 +68,8 @@ public class SessionLog : MonoBehaviour
                 {
                     // Unknown is a generation fault, not trainee performance,
                     // and must never count against them.
-                    if (t.verdict == DeescalationVerdict.Neutral) count++;
+                    if (t.verdict == DeescalationVerdict.Neutral
+                        || t.verdict == DeescalationVerdict.Escalated) count++;
                 }
                 return count;
             }

@@ -1,7 +1,12 @@
 """Tests for TTS helpers that need no model."""
 
-import numpy as np
+import sys
+import types
 
+import numpy as np
+import pytest
+
+from app import config
 from app.engines import tts
 
 
@@ -148,3 +153,36 @@ def test_faster_qwen_behaves_like_qwen_apart_from_loading() -> None:
     # method is literally the same function object on both classes.
     assert tts.FasterQwenTextToSpeech.synthesise is tts.QwenTextToSpeech.synthesise
     assert tts.FasterQwenTextToSpeech._generate is tts.QwenTextToSpeech._generate
+
+
+def test_faster_qwen_temperature_reaches_both_halves_of_the_model(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """The call and the predictor's CUDA graph each need it, and the graph first.
+
+    Args:
+        monkeypatch: Replaces the faster_qwen3_tts package.
+    """
+    seen: dict[str, float] = {}
+
+    class Model:
+        """Records the temperatures in force at the first synthesis."""
+
+        predictor_graph = types.SimpleNamespace(temperature=0.9)
+
+        def generate_custom_voice(self, temperature: float, **_: object) -> tuple[list, int]:
+            """Returns one sample of audio."""
+            seen.update(call=temperature, graph=self.predictor_graph.temperature)
+            return [np.zeros(1, dtype=np.float32)], 24000
+
+    package = types.SimpleNamespace(
+        FasterQwen3TTS=types.SimpleNamespace(from_pretrained=lambda *_, **__: Model()))
+    monkeypatch.setitem(sys.modules, "faster_qwen3_tts", package)
+    tts.FasterQwenTextToSpeech(temperature=0.4).warm_up()
+    assert seen == {"call": 0.4, "graph": 0.4}
+
+
+def test_faster_qwen_temperature_is_read_from_the_config() -> None:
+    """The config value reaches the engine."""
+    settings = config.load(["text_to_speech.engine=faster-qwen",
+                            "text_to_speech.faster-qwen.temperature=0.4"])
+    assert tts.build(settings.text_to_speech)._temperature == 0.4  # pylint: disable=protected-access

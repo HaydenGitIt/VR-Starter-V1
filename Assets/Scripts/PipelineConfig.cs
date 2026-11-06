@@ -112,7 +112,7 @@ public class PipelineConfig : ScriptableObject
     [Tooltip("Number of exchanges that genuinely reach her before the scenario resolves well. " +
              "Balance this against strikesAllowed: too low and the scenario ends before it has " +
              "taught anything, too high and a competent trainee still runs out of turns.")]
-    public int progressToResolve = 4;
+    public int progressToResolve = 5;
 
     // ---------------------------------------------------------------
     // DERIVED VALUES

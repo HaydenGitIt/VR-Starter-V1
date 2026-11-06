@@ -34,7 +34,7 @@ questions:
       Is the staff member's latest line essentially the same acknowledgement as their
       previous line, without moving anywhere?
 
-# Sent to Mel's model with the verdict, so her line acts it out. Small models otherwise
+# Sent to Mel's model with Laya's verdict, so her line acts it out. Small models otherwise
 # follow the trainee's words more than the verdict.
 notes_to_mel:
   deescalated: >-
@@ -43,3 +43,18 @@ notes_to_mel:
   neutral: >-
     Director's note (not spoken by anyone): their last line did not reach you. Do not thank
     them or agree. Push back, or close off a little.
+  escalated: >-
+    Director's note (not spoken by anyone): their last line made this worse. Do not thank
+    them or agree. Go shorter and flatter, and close off further.
+
+# Sent to Mel's model every turn, so she sounds like the state she is in. The state itself
+# comes from scenario.levels in config.yaml. One note per Emotion in app/mel_state.py.
+state_notes:
+  agitated: "Right now you are agitated: tense, clipped and guarded."
+  distressed: >-
+    Right now you are distressed: the fear and shame are showing. You are upset rather than
+    hostile, and letting them see something.
+  softening: >-
+    Right now you are softening: you have started to believe this person is actually trying.
+    You are still worried about the money.
+  calm: "Right now you are calm: settled and able to breathe, though the money has not gone away."

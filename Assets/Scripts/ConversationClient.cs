@@ -611,6 +611,7 @@ public class ConversationClient : MonoBehaviour
         {
             case "deescalated": return DeescalationVerdict.Deescalated;
             case "neutral": return DeescalationVerdict.Neutral;
+            case "escalated": return DeescalationVerdict.Escalated;
             default: return DeescalationVerdict.Unknown;
         }
     }

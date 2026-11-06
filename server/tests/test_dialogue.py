@@ -30,7 +30,7 @@ def test_ollama_requests_share_context_and_keep_alive(monkeypatch: pytest.Monkey
             A one-chunk stream.
         """
         requests.append(request)
-        chunk = types.SimpleNamespace(message=types.SimpleNamespace(content="<neutral><calm>Hi."))
+        chunk = types.SimpleNamespace(message=types.SimpleNamespace(content="<neutral>Hi."))
         return (c for c in [chunk])
 
     engine = dialogue.OllamaDialogue(context_length=6144, keep_alive="30m")

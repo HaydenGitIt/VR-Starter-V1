@@ -18,6 +18,7 @@ def test_conversation_over_websocket(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(main, "speech_to_text", stt.FakeSpeechToText())
     monkeypatch.setattr(main, "dialogue_engine", dialogue.FakeDialogue())
     monkeypatch.setattr(main, "text_to_speech", tts.FakeTextToSpeech())
+    monkeypatch.setattr(main, "director_engine", director.NoDirector())
     with testclient.TestClient(main.app) as client:
         with client.websocket_connect("/conversation") as ws:
             assert ws.receive_json()["type"] == "ready"
@@ -42,7 +43,7 @@ def test_conversation_over_websocket(monkeypatch: pytest.MonkeyPatch) -> None:
 class _Unreachable(dialogue.Dialogue):
     """A dialogue engine whose server is down."""
 
-    def generate(self, history: list[dict[str, str]],
+    def generate(self, history: list[dict[str, str]], state_note: str = "",
                  judgement: director.Judgement | None = None) -> dialogue.Reply:
         """Fails as if Ollama were not running."""
         raise ConnectionError("Failed to connect to Ollama.")
@@ -57,6 +58,7 @@ def test_engine_failure_still_ends_the_turn(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(main, "speech_to_text", stt.FakeSpeechToText())
     monkeypatch.setattr(main, "dialogue_engine", _Unreachable())
     monkeypatch.setattr(main, "text_to_speech", tts.FakeTextToSpeech())
+    monkeypatch.setattr(main, "director_engine", director.NoDirector())
     with testclient.TestClient(main.app) as client:
         with client.websocket_connect("/conversation") as ws:
             assert ws.receive_json()["type"] == "ready"

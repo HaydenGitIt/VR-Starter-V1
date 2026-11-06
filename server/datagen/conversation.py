@@ -113,7 +113,7 @@ def show_conversation(record: dict[str, Any], grades: dict[int, dict[str, Any]] 
             g = grades[t["turn"]]
             print(f"    grade {g['score']}/4 {g['verdict']} [{g['category']}] {g['reason']}")
         retry = f", {t['retries']} retr{'y' if t['retries'] == 1 else 'ies'}" if t["retries"] else ""
-        print(f"  MEL <{t['verdict']}><{t['emotion']}>{retry}: {t['mel_line'] or '(no spoken line)'}"
+        print(f"  MEL <{t['verdict']}> {t['emotion']}{retry}: {t['mel_line'] or '(no spoken line)'}"
               f"    strikes {t['strikes']}, progress {t['progress']}")
     print(f"\n  OUTCOME: {record['outcome']} after {record['turns_used']} turns, "
           f"{record['duration_s']}s")

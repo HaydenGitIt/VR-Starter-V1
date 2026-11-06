@@ -43,20 +43,20 @@ class ProviderDialogue(dialogue.Dialogue):
         self._role = role
         self.attempts: list[dict[str, Any]] = []
 
-    def generate(self, history: list[dict[str, str]],
+    def generate(self, history: list[dict[str, str]], state_note: str = "",
                  judgement: director.Judgement | None = None) -> dialogue.Reply:
         """See base class. Records every attempt in self.attempts.
 
         Mel judges the line herself here, as in the original design: the data's labels
         come from the graders, so ParentGame never passes a judgement.
         """
-        result = providers.complete(self._role, PARENT_PROMPT, history)
+        result = providers.complete(self._role, f"{PARENT_PROMPT}\n\n{state_note}", history)
         self.attempts.append({"raw": result.text, "latency_s": result.latency_s,
                               "usage": result.usage})
         match = TAGS.match(result.text)
         if not match or match.end() > GAME["tag_deadline_chars"]:
-            raise dialogue.MalformedReply(f"No tags in output: {result.text[:80]!r}")
-        return dialogue.Reply(match.group(1).lower(), match.group(2).lower(),
+            raise dialogue.MalformedReply(f"No tag in output: {result.text[:80]!r}")
+        return dialogue.Reply(match.group(1).lower(),
                               dialogue._words(result.text[match.end():]))  # pylint: disable=protected-access
 
 
