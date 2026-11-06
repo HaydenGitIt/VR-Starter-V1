@@ -22,7 +22,7 @@ scenario:
   # deescalation moves one step along it, so these six are levels 5 to 0 and take five
   # deescalations. Names are the Emotion enum in app/mel_state.py, which matches Unity.
   # (entries - 1) + (strikes - 1) must be <= max_turns.
-  levels: [agitated, agitated, distressed, distressed, softening, calm]
+  levels: [agitated, agitated, agitated, agitated, softening, calm]
   # Whether Mel's last line is spoken before the ending Timeline. On a third
   # strike it is cut before any audio exists; on success she finishes.
   # Running out of turns always lets her finish (the turn is already spoken).
@@ -158,11 +158,11 @@ text_to_speech:
     # fallback, used for an unknown tag. Leading with who is speaking holds
     # the voice steady; strong emotion prompts otherwise drift it.
     instructions:
-      agitated: "A woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
-      distressed: "A woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
-      softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
-      calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
-      "": "A woman in her forties speaks at a moderate pace."
+      agitated: "An American woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
+      distressed: "An American woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
+      softening: "An American woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
+      calm: "An American woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
+      "": "An American woman in her forties speaks at a moderate pace."
   # The same models through faster-qwen3-tts, which captures the decode
   # step as a CUDA graph. The stock library runs at ~2x real time, i.e.
   # slower than playback, because of ~500 kernel launches per step; this
@@ -179,8 +179,8 @@ text_to_speech:
     attn_implementation: sdpa     # needs nothing extra installed
     expected_sample_rate: 24000
     instructions:
-      agitated: "A woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
-      distressed: "A woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
-      softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
-      calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
-      "": "A woman in her forties speaks at a moderate pace."
+      agitated: "An American woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
+      distressed: "An American woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
+      softening: "An American woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
+      calm: "An American woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
+      "": "An American woman in her forties speaks at a moderate pace."
