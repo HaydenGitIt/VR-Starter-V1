@@ -1,4 +1,4 @@
-.venv/
+.venv*/
 __pycache__/
 config.local.yaml
 # Trained director checkpoints (python -m datagen.train_director): ~800 MB each.

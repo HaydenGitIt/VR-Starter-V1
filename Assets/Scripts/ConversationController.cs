@@ -79,6 +79,22 @@ public class ConversationController : MonoBehaviour
     // (a discarded utterance, or a failure ending), there is nothing to wait for.
     private bool audioThisTurn;
 
+    // Whether the server has sent turn_end, which it does only after its last
+    // audio chunk. Until it arrives, more of her reply is still coming and an
+    // empty buffer is a gap between sentences, not the end of her turn.
+    //
+    // WHY THIS EXISTS:
+    // Playback used to be the only signal, because Kokoro synthesises at
+    // ~0.01x real time - a hundred times faster than playback - so the buffer
+    // never emptied mid-reply and the only gaps were the deliberate 90ms
+    // between sentences. Qwen runs at ~0.5x with the dialogue model sharing
+    // the GPU, which is still ahead of playback overall but NOT ahead of a
+    // short sentence: while "It is hard." plays for under a second, the four
+    // seconds that follow it take about two to synthesise. The buffer then
+    // sits empty for over a second - four times silenceBeforeFinished - and
+    // playback alone cannot tell that from her having finished.
+    private bool turnEnded;
+
     private float reopenAt = -1f;
 
     // True once every required reference was found. Guards the subscribe and
@@ -226,6 +242,7 @@ public class ConversationController : MonoBehaviour
     public void BeginScenario()
     {
         audioThisTurn = false;
+        turnEnded = false;
         detector.SetListening(false);
 
         SetState(LoopState.Speaking);
@@ -268,6 +285,7 @@ public class ConversationController : MonoBehaviour
         }
 
         audioThisTurn = false;
+        turnEnded = false;
         SetState(LoopState.Processing);
 
         client.SendUtterance(toSend);
@@ -313,10 +331,17 @@ public class ConversationController : MonoBehaviour
     {
         if (ended || State == LoopState.Ended) return;
 
-        // If she spoke, playback is still running and OnSpeechFinished will
-        // reopen the microphone. If she did not, nothing else will fire, so
-        // reopen here.
-        if (!audioThisTurn)
+        // The server sends this only after its last audio chunk, so from here
+        // on an empty buffer really is the end of her turn.
+        turnEnded = true;
+
+        // Normally playback is still running and OnSpeechFinished reopens the
+        // microphone. Reopen here in the two cases where it will not fire:
+        // she never spoke at all (a discarded utterance), or her audio had
+        // already drained while this message was still in flight - a short
+        // reply can finish playing before the server gets here, and that
+        // OnSpeechFinished was swallowed by the guard below.
+        if (!audioThisTurn || !player.IsSpeaking)
         {
             ScheduleReopen();
         }
@@ -325,6 +350,12 @@ public class ConversationController : MonoBehaviour
     private void HandleSpeechFinished()
     {
         if (State == LoopState.Ended) return;
+
+        // An empty buffer before turn_end is a gap between sentences, not the
+        // end of her turn. Reopening here would capture the trainee's "mm-hm"
+        // as their whole reply and leave Mel talking over an open microphone.
+        // HandleTurnEnd reopens instead if playback has already drained.
+        if (!turnEnded) return;
 
         ScheduleReopen();
     }

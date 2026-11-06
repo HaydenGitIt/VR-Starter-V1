@@ -96,7 +96,7 @@ director:
     threshold: 0.5            # P(reached her) needed to count as reaching her
 
 text_to_speech:
-  engine: kokoro
+  engine: faster-qwen     # kokoro on a machine without about 8 GB of GPU memory
   kokoro:                 # outputs 24000 Hz: keep audio.playback_sample_rate at 24000
     voice: af_heart       # af_/am_ American, bf_/bm_ British
     speed: 1.0
@@ -164,8 +164,8 @@ text_to_speech:
   # The same models through faster-qwen3-tts, which captures the decode
   # step as a CUDA graph. The stock library runs at ~2x real time, i.e.
   # slower than playback, because of ~500 kernel launches per step; this
-  # replays them as one. Needs `uv pip install --python .venv
-  # faster-qwen3-tts` and, on a 50-series GPU, a cu128 PyTorch 2.7+.
+  # replays them as one. requirements.txt installs it; on a 50-series GPU
+  # it also needs a cu128 PyTorch 2.7+.
   # Options are the same as `qwen` above, except device ("cuda", not
   # "cuda:0") and attn_implementation.
   faster-qwen:

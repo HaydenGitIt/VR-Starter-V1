@@ -148,6 +148,11 @@ assumption. Much larger than Kokoro: several GB downloaded on first start
 and a 1.7B model resident on the GPU, so check it fits alongside the
 dialogue model before switching a low-memory machine over.
 
+`text_to_speech.engine` defaults to `faster-qwen`, the same voice through
+`faster-qwen3-tts`. `requirements.txt` installs it, and it only loads on `transformers`
+5.15.1 or 5.16.1. It needs under 0.5x realtime on `check_tts.py` to be usable (about 2x
+on the 6 GB dev PC, where it barely fits, so that machine should use Kokoro).
+
 ### Sending recorded speech
 
 On the test page, click **Talk**, speak, then click **Stop & send** — the
