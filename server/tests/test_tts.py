@@ -50,6 +50,37 @@ def test_strip_module_prefix_only_strips_the_leading_occurrence() -> None:
         "submodule.module.weight": 1}
 
 
+def test_legacy_weight_norm_renames_both_parametrisation_halves() -> None:
+    """Voxi uses torch's newer weight-norm spelling; Kokoro expects the older.
+
+    original0 is the magnitude and original1 the direction, the same two
+    tensors weight_g and weight_v hold, so this is purely a rename.
+    """
+    saved = {
+        "F0.0.conv1.parametrizations.weight.original0": 1,
+        "F0.0.conv1.parametrizations.weight.original1": 2,
+        "F0.0.conv1.bias": 3,
+    }
+    assert tts._to_legacy_weight_norm(saved) == {
+        "F0.0.conv1.weight_g": 1,
+        "F0.0.conv1.weight_v": 2,
+        "F0.0.conv1.bias": 3,
+    }
+
+
+def test_legacy_weight_norm_leaves_old_style_names_alone() -> None:
+    """A checkpoint already in the old spelling passes through unchanged."""
+    old = {"F0.0.conv1.weight_g": 1, "F0.0.conv1.weight_v": 2}
+    assert tts._to_legacy_weight_norm(old) == old
+
+
+def test_legacy_weight_norm_only_rewrites_the_suffix() -> None:
+    """The rename anchors to the end, so similar text mid-key is untouched."""
+    assert tts._to_legacy_weight_norm(
+        {"parametrizations.weight.original0.inner.bias": 1}) == {
+            "parametrizations.weight.original0.inner.bias": 1}
+
+
 def test_voxi_picks_a_voicepack_per_emotion_and_falls_back() -> None:
     """Each tag maps to a pack; unknown and empty tags get the fallback.
 

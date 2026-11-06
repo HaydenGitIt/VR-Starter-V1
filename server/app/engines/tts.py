@@ -232,7 +232,15 @@ class VoxiTextToSpeech(KokoroTextToSpeech):
                     f"model has no such submodule. The fine-tune does not match this "
                     f"architecture.")
 
-            getattr(model, name).load_state_dict(_strip_module_prefix(submodule_state))
+            target = getattr(model, name)
+            cleaned = _strip_module_prefix(submodule_state)
+
+            # Only rename when the saved spelling does not already fit, so
+            # this becomes a no-op the day Kokoro moves to the new API.
+            if not set(cleaned) <= set(target.state_dict()):
+                cleaned = _to_legacy_weight_norm(cleaned)
+
+            target.load_state_dict(cleaned)
 
         model.eval()
 
@@ -513,6 +521,43 @@ def _strip_module_prefix(state: dict) -> dict:
         The same mapping with the prefix removed from any key that has it.
     """
     return {key.removeprefix("module."): value for key, value in state.items()}
+
+
+# PyTorch's two weight-norm spellings. The original torch.nn.utils.weight_norm
+# splits a weight into "weight_g" (magnitude) and "weight_v" (direction); the
+# newer torch.nn.utils.parametrizations.weight_norm stores the same two
+# tensors as "original0" and "original1". Same values, same shapes, different
+# names - so converting between them is a rename and nothing more.
+_WEIGHT_NORM_RENAMES = {
+    ".parametrizations.weight.original0": ".weight_g",
+    ".parametrizations.weight.original1": ".weight_v",
+}
+
+
+def _to_legacy_weight_norm(state: dict) -> dict:
+    """Renames new-style weight-norm parameters to the old spelling.
+
+    Voxi was trained with the newer parametrisation API, while Kokoro
+    builds its modules with the original one, so the saved names match
+    nothing the model is looking for.
+
+    Args:
+        state: One submodule's state dict, already unwrapped.
+
+    Returns:
+        The same mapping with any parametrisation names rewritten. Keys
+        that use neither spelling are left alone.
+    """
+    renamed = {}
+
+    for key, value in state.items():
+        for new, old in _WEIGHT_NORM_RENAMES.items():
+            if key.endswith(new):
+                key = key[: -len(new)] + old
+                break
+        renamed[key] = value
+
+    return renamed
 
 
 # Mel's four states onto Voxi's eight voicepacks. This is a first guess,
