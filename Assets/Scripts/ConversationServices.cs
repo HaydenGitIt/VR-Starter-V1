@@ -80,10 +80,15 @@ public enum DeescalationVerdict
     Deescalated,
 
     /// <summary>
-    /// The trainee did not reach her. Covers both the merely unhelpful and
-    /// the actively poor, since neither moves her and neither makes her worse.
+    /// The trainee did not reach her. A strike, but she stays where she is.
     /// </summary>
-    Neutral
+    Neutral,
+
+    /// <summary>
+    /// The trainee made it worse. A strike, and she moves back one level. She
+    /// never goes past her starting state, so there is no matching emotion.
+    /// </summary>
+    Escalated
 }
 
 /// <summary>
@@ -261,6 +266,11 @@ public class ConversationLog
         {
             case DeescalationVerdict.Neutral:
                 StrikeCount++;
+                break;
+
+            case DeescalationVerdict.Escalated:
+                StrikeCount++;
+                ProgressCount = Math.Max(0, ProgressCount - 1);
                 break;
 
             case DeescalationVerdict.Deescalated:

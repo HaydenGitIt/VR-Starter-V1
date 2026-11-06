@@ -88,8 +88,8 @@ function handleMessage(msg) {
       break;
     case 'turn_complete':
       counts.turn = msg.turn;
-      if (msg.verdict === 'neutral') counts.strikes++;
-      if (msg.verdict === 'deescalated') counts.progress++;
+      counts.strikes = msg.strikes;
+      counts.progress = msg.progress;
       showCounters();
       log('meta', `turn ${msg.turn} complete · ${msg.latency}s`);
       break;

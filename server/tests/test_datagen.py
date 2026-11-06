@@ -177,7 +177,7 @@ def _scripted(role: dict[str, Any], system: str, messages: list[dict[str, str]],
     del system, messages, schema
     replies = {
         "fake-teacher": "I hear you, that sounds really hard.",
-        "fake-mel": "<deescalated><agitated>Thank you. It's been a rotten week.",
+        "fake-mel": "<deescalated>Thank you. It's been a rotten week.",
         "fake-grader-yes": json.dumps({"reason": "Acknowledges her.", "category": "acknowledging",
                                        "verdict": "deescalated", "score": 3}),
         "fake-grader-no": json.dumps({"reason": "Filler.", "category": "filler",
@@ -212,13 +212,13 @@ def test_generate_grade_and_export_end_to_end(tmp_path: Any, monkeypatch: pytest
     assert generate.run(teacher, mel, 3, worker="w", data_dir=tmp_path) == 3
     assert generate.run(teacher, mel, 3, worker="w", data_dir=tmp_path) == 0  # resumes
     conversations = store.read_conversations(tmp_path)
-    assert [(c["outcome"], c["turns_used"]) for c in conversations] == [("resolved", 6)] * 3
+    assert [(c["outcome"], c["turns_used"]) for c in conversations] == [("resolved", 5)] * 3
 
     grade.run([_fake_role("fake-grader-yes"), _fake_role("fake-grader-no")], tmp_path)
-    assert len(store.read_grades(tmp_path)) == 2 * 18
+    assert len(store.read_grades(tmp_path)) == 2 * 15
 
     pairs = export.write(tmp_path)
-    assert len(pairs) == 18
+    assert len(pairs) == 15
     assert pairs[0][0]["gold"]["reached_her"] == {
         "label": "false", "noul": 0.5, "probabilities": {"false": 0.5, "true": 0.5}, "confidence": 0.0}
     splits: dict[str, set[str]] = {}
@@ -226,4 +226,4 @@ def test_generate_grade_and_export_end_to_end(tmp_path: Any, monkeypatch: pytest
         splits.setdefault(entry["conversation_id"], set()).add(entry["split"])
     assert all(len(s) == 1 for s in splits.values())
     on_disk = sum(len(store.read_jsonl(tmp_path / f"director_{s}.jsonl")) for s in ("train", "test"))
-    assert on_disk == 18
+    assert on_disk == 15

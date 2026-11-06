@@ -18,9 +18,11 @@ audio:
 scenario:
   max_turns: 8
   strikes_allowed: 3            # turns that fail to reach her before she leaves
-  # Main teaching dial. 4 ended the scenario in four turns, too short to
-  # teach anything. progress + (strikes - 1) must be <= max_turns.
-  progress_to_resolve: 6
+  # Main teaching dial: Mel's state, from where she starts to where she resolves. Each
+  # deescalation moves one step along it, so these six are levels 5 to 0 and take five
+  # deescalations. Names are the Emotion enum in app/mel_state.py, which matches Unity.
+  # (entries - 1) + (strikes - 1) must be <= max_turns.
+  levels: [agitated, agitated, distressed, distressed, softening, calm]
   # Whether Mel's last line is spoken before the ending Timeline. On a third
   # strike it is cut before any audio exists; on success she finishes.
   # Running out of turns always lets her finish (the turn is already spoken).
@@ -31,12 +33,10 @@ scenario:
   # Fixed so every trainee gets the same stimulus with no generation delay.
   opening_line: "Eighty dollars. Centre fees have gone up eighty dollars. I can't afford that! What are you going to do about this?"
   opening_verdict: neutral
-  opening_emotion: agitated
   # Spoken when the model fails to produce valid tags max_retries + 1 times.
   # Uses a turn but is never a strike.
   fallback_line: "Sorry, what was that? I didn't catch you."
   fallback_verdict: neutral
-  fallback_emotion: agitated
   max_retries: 1
   # Drop a trailing fragment cut off by the token cap, unless it is all
   # she said.
@@ -89,7 +89,9 @@ dialogue:
 # `python -m datagen.train_director` decides, and Mel's dialogue model only acts it out.
 # See datagen/README.md for training and switching it on.
 director:
-  engine: none
+  # Who judges the trainee. Without its model laya stops the server at startup. To run
+  # without it, set "none", which leaves the verdict to Mel's own model.
+  engine: laya
   laya:
     model: models/director    # checkpoint folder, relative to the server folder
     device: null              # null = GPU if available

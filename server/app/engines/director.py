@@ -1,8 +1,8 @@
 """Director engines: decide whether the trainee's latest line reached Mel.
 
 With a director, Mel's dialogue model no longer judges the trainee itself: the director
-decides the verdict, the session scores it, and the dialogue model is told the verdict and
-only acts it out. "none" keeps the original design, where Mel's own tags decide.
+decides the verdict, the state tracker scores it, and the dialogue model is told the verdict
+and only acts it out. "none" leaves the verdict to Mel's own model, in the tag it writes.
 
 The questions (prompts/director.yaml) and the state built here are exactly what datagen
 exports for training, so a trained model sees in the game what it saw in training.
@@ -20,13 +20,14 @@ import yaml
 from app import config
 
 _SERVER_DIR = pathlib.Path(__file__).resolve().parents[2]
-_TAGS = re.compile(r"^\s*<[^>]*>\s*<[^>]*>")
+_TAGS = re.compile(r"^\s*(?:<[^>]*>\s*)+")
 _START_TOKEN = re.compile(r"^\[[A-Z_]+\]$")  # e.g. [SCENARIO_START], the scenario's first message
 
 # The questions Laya is asked and the notes Mel gets, editable in prompts/director.yaml.
 _PROMPTS = yaml.safe_load((_SERVER_DIR / "prompts" / "director.yaml").read_text(encoding="utf-8"))
 QUESTIONS: dict[str, Any] = _PROMPTS["questions"]
 NOTES: dict[str, str] = _PROMPTS["notes_to_mel"]
+STATE_NOTES: dict[str, str] = _PROMPTS["state_notes"]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -34,7 +35,7 @@ class Judgement:
     """The director's decision on the trainee's latest line.
 
     Attributes:
-        verdict: "deescalated" (it reached her) or "neutral" (it did not).
+        verdict: A mel_state.Verdict value.
         probability: The director's P(the line reached her).
         note: One line telling Mel's dialogue model how to react.
     """
@@ -80,7 +81,7 @@ def judgement(verdict: str, probability: float) -> Judgement:
     """Wraps a verdict with its note for Mel.
 
     Args:
-        verdict: "deescalated" or "neutral".
+        verdict: A mel_state.Verdict value.
         probability: P(the line reached her).
 
     Returns:
@@ -91,6 +92,9 @@ def judgement(verdict: str, probability: float) -> Judgement:
 
 class Director(abc.ABC):
     """Decides whether the trainee's latest line reached Mel."""
+
+    def check(self) -> None:
+        """Raises if the engine cannot run. Called once before the server starts."""
 
     def warm_up(self) -> None:
         """Loads models. Called once before the server reports ready."""
@@ -108,7 +112,7 @@ class Director(abc.ABC):
 
 
 class NoDirector(Director):
-    """The original design: Mel's own tags decide."""
+    """The original design: Mel's own model decides, in its verdict tag."""
 
     def judge(self, history: list[dict[str, str]]) -> Judgement | None:
         """See base class."""
@@ -134,17 +138,29 @@ class LayaDirector(Director):
         """Stores settings; the model loads in warm_up().
 
         Args:
-            model: Checkpoint folder, relative to the server folder (or a Laya model name).
+            model: Checkpoint folder, relative to the server folder.
             device: "cuda", "cpu", or None to use the GPU when available.
             threshold: P(reached her) needed for "deescalated".
             repeated_threshold: P(repeated) at or above which the line is "neutral" anyway.
         """
-        path = _SERVER_DIR / model
-        self._model = str(path) if path.exists() else model
+        self._model = str(_SERVER_DIR / model)
         self._device = device
         self._threshold = threshold
         self._repeated_threshold = repeated_threshold
         self._agent: Any = None
+
+    def check(self) -> None:
+        """See base class.
+
+        Raises:
+            FileNotFoundError: If the checkpoint is missing. There is deliberately no
+                fallback, because Mel's own model scores differently.
+        """
+        if not pathlib.Path(self._model).exists():
+            raise FileNotFoundError(
+                f"Laya's checkpoint is missing: {self._model}\n"
+                "Train it with python -m datagen.train_director, or copy it from another "
+                "machine. To run without Laya, set director.engine: none.")
 
     def warm_up(self) -> None:
         """See base class."""

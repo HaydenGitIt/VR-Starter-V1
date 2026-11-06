@@ -13,9 +13,9 @@ from app.engines import dialogue, director
 def test_state_from_history_matches_the_training_export() -> None:
     """The director reads Mel's last line (untagged) and the staff member's last two."""
     history = [{"role": "user", "content": "[SCENARIO_START]"},
-               {"role": "assistant", "content": "<neutral><agitated>Eighty dollars."},
+               {"role": "assistant", "content": "<neutral>Eighty dollars."},
                {"role": "user", "content": "I hear you."},
-               {"role": "assistant", "content": "<deescalated><agitated>Then you're the first."},
+               {"role": "assistant", "content": "<deescalated>Then you're the first."},
                {"role": "user", "content": "I hear you."}]
     assert director.state_from_history(history) == director.state(
         "Then you're the first.", "I hear you.", "I hear you.")
@@ -54,7 +54,7 @@ def test_director_mode_gives_mel_the_director_prompt() -> None:
 
 
 def test_ollama_mel_acts_out_a_judgement(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The verdict is pre-filled and the note sent with the request, and the tags parse.
+    """With a verdict, her model writes only her words, and the notes go with the request.
 
     Args:
         monkeypatch: Replaces the Ollama client's chat call.
@@ -72,13 +72,25 @@ def test_ollama_mel_acts_out_a_judgement(monkeypatch: pytest.MonkeyPatch) -> Non
         """
         requests.append(request)
         return (types.SimpleNamespace(message=types.SimpleNamespace(content=c))
-                for c in ["agitated>Is that", " it?"])
+                for c in ["Is that", " it?"])
 
     engine = dialogue.OllamaDialogue()
     monkeypatch.setattr(engine._client, "chat", chat)  # pylint: disable=protected-access
-    reply = engine.generate([{"role": "user", "content": "Okay."}],
+    reply = engine.generate([{"role": "user", "content": "Okay."}], "You feel agitated.",
                             director.judgement("neutral", 0.1))
-    assert (reply.verdict, reply.emotion, "".join(reply.text)) == ("neutral", "agitated", "Is that it?")
-    *_, note, prefill = requests[0]["messages"]
-    assert note == {"role": "system", "content": director.NOTES["neutral"]}
-    assert prefill == {"role": "assistant", "content": "<neutral><"}
+    assert (reply.verdict, "".join(reply.text)) == ("neutral", "Is that it?")
+    assert requests[0]["messages"][-1] == {
+        "role": "system", "content": f"You feel agitated. {director.NOTES['neutral']}"}
+
+
+def test_laya_refuses_to_start_without_its_checkpoint() -> None:
+    """A missing model is an error, never a quiet switch to Mel's own judging."""
+    with pytest.raises(FileNotFoundError, match="director.engine: none"):
+        director.LayaDirector(model="models/no-such-checkpoint").check()
+
+
+def test_only_an_explicit_none_skips_laya() -> None:
+    """Laya is the default, so leaving it out has to be a choice."""
+    with pytest.raises(FileNotFoundError):
+        director.build(config.load(["director.laya.model=models/no-such-checkpoint"]).director).check()
+    director.build(config.load(["director.engine=none"]).director).check()

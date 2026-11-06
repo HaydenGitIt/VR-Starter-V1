@@ -191,6 +191,7 @@ app.mount("/", staticfiles.StaticFiles(directory=_WEB_DIR, html=True), name="web
 
 def main() -> None:
     """Starts the server on the configured host and port."""
+    director_engine.check()
     uvicorn.run(app, host=settings.host, port=settings.port)
 
 

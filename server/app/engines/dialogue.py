@@ -8,29 +8,27 @@ from collections.abc import Generator, Iterator
 
 import ollama
 
-from app import config
+from app import config, mel_state
 from app.engines import director
 
 _SERVER_DIR = pathlib.Path(__file__).resolve().parents[2]
 
 
 class MalformedReply(Exception):
-    """The model did not produce valid tags, so the reply cannot be trusted."""
+    """The model did not produce a valid verdict tag, so the reply cannot be trusted."""
 
 
 @dataclasses.dataclass(frozen=True)
 class Reply:
-    """One of Mel's replies, with tags known before any text exists.
+    """One of Mel's replies, with its verdict known before any text exists.
 
     Attributes:
-        verdict: "deescalated" (they reached her) or "neutral" (they did not).
-        emotion: "agitated", "distressed", "softening" or "calm".
+        verdict: A mel_state.Verdict value.
         text: Mel's spoken line, streamed in pieces as it is generated.
             Close it to stop generation early.
     """
 
     verdict: str
-    emotion: str
     text: Generator[str, None, None]
 
 
@@ -41,22 +39,24 @@ class Dialogue(abc.ABC):
         """Loads models. Called once before the server reports ready."""
 
     @abc.abstractmethod
-    def generate(self, history: list[dict[str, str]],
+    def generate(self, history: list[dict[str, str]], state_note: str = "",
                  judgement: director.Judgement | None = None) -> Reply:
         """Starts Mel's reply to the trainee's latest line.
 
         Args:
             history: Chat messages, oldest first, each with "role" ("user"
-                for the trainee, "assistant" for Mel) and "content". Mel's
-                messages include their tags, e.g. "<neutral><agitated>...".
+                for the trainee, "assistant" for Mel) and "content". When
+                she judges, her messages start with the verdict tag, e.g.
+                "<neutral>...".
+            state_note: How she feels now, from the state tracker.
             judgement: The director's verdict for Mel to act out, or None for
                 Mel to judge the line herself.
 
         Returns:
-            The reply, once its tags are known.
+            The reply, once its verdict is known.
 
         Raises:
-            MalformedReply: If valid tags do not arrive.
+            MalformedReply: If she is judging and no valid tag arrives.
         """
 
 
@@ -65,15 +65,15 @@ class FakeDialogue(Dialogue):
 
     _PHRASES = ("sorry", "hear you", "listening")
 
-    def generate(self, history: list[dict[str, str]],
+    def generate(self, history: list[dict[str, str]], state_note: str = "",
                  judgement: director.Judgement | None = None) -> Reply:
         """See base class."""
         line = history[-1]["content"]
         reached = (judgement.verdict == "deescalated" if judgement
                    else any(phrase in line.lower() for phrase in self._PHRASES))
         if reached:
-            return Reply("deescalated", "softening", _words("Okay. Thank you for saying that."))
-        return Reply("neutral", "agitated", _words(f'"{line}" That doesn\'t help.'))
+            return Reply("deescalated", _words("Okay. Thank you for saying that."))
+        return Reply("neutral", _words(f'"{line}" That doesn\'t help.'))
 
 
 def _words(text: str) -> Generator[str, None, None]:
@@ -89,15 +89,14 @@ def _words(text: str) -> Generator[str, None, None]:
 
 
 class OllamaDialogue(Dialogue):
-    """A local Ollama model that writes its own tags, ported from the original.
+    """A local Ollama model, ported from the original.
 
-    The prompt makes every reply start "<verdict><emotion>", so the tags
-    can be read from the first few tokens of the stream.
+    Judging for itself, its prompt makes every reply start "<verdict>", so
+    the verdict can be read from the first few tokens of the stream. With a
+    director the verdict is already known and it writes only her words.
     """
 
-    _TAGS = re.compile(
-        r"^\s*<(deescalated|neutral)>\s*<(agitated|distressed|softening|calm)>",
-        re.IGNORECASE)
+    _TAGS = re.compile(rf"^\s*<({'|'.join(mel_state.Verdict)})>", re.IGNORECASE)
 
     def __init__(
         self,
@@ -119,7 +118,7 @@ class OllamaDialogue(Dialogue):
             prompt: System prompt file, relative to the server folder.
             temperature: Higher is more varied but follows the format less.
             max_tokens: Hard cap on reply length (and so on latency).
-            tag_deadline_chars: If this much arrives with no valid tags,
+            tag_deadline_chars: If this much arrives with no valid tag,
                 the reply is rejected rather than salvaged.
             context_length: Tokens the model can see (Ollama's num_ctx). If
                 the conversation outgrows it, Ollama silently drops the
@@ -162,44 +161,42 @@ class OllamaDialogue(Dialogue):
             options={**self._options, "num_predict": 1},
             keep_alive=self._keep_alive)
 
-    def generate(self, history: list[dict[str, str]],
+    def generate(self, history: list[dict[str, str]], state_note: str = "",
                  judgement: director.Judgement | None = None) -> Reply:
         """See base class.
 
-        With a judgement, Mel's reply is pre-filled with "<verdict><" so the model writes
-        only her emotion and line, and the director's note tells it how to react. Both go
-        in this request only; the session's history keeps just what she said.
+        The notes go in this request only; the session's history keeps just what she said.
         """
+        notes = [note for note in (state_note, judgement.note if judgement else "") if note]
         messages = [{"role": "system", "content": self._prompt}, *history]
-        raw = ""
-        if judgement:
-            raw = f"<{judgement.verdict}><"
-            messages += [{"role": "system", "content": judgement.note},
-                         {"role": "assistant", "content": raw}]
+        if notes:
+            messages.append({"role": "system", "content": " ".join(notes)})
         stream = self._client.chat(
             model=self._model,
             messages=messages,
             options=self._options,
             keep_alive=self._keep_alive,
             stream=True)
+        if judgement:
+            return Reply(judgement.verdict, _rest_of_stream("", stream))
+        raw = ""
         for chunk in stream:
             raw += chunk.message.content
             if match := self._TAGS.match(raw):
-                return Reply(match.group(1).lower(), match.group(2).lower(),
-                             _rest_of_stream(raw[match.end():], stream))
+                return Reply(match.group(1).lower(), _rest_of_stream(raw[match.end():], stream))
             if len(raw) > self._tag_deadline_chars:
                 break
         stream.close()
-        raise MalformedReply(f"No tags in output: {raw!r}")
+        raise MalformedReply(f"No tag in output: {raw!r}")
 
 
 def _rest_of_stream(
     first: str, stream: Iterator[ollama.ChatResponse]
 ) -> Generator[str, None, None]:
-    """Streams the dialogue that follows the tags.
+    """Streams the dialogue that follows any tag.
 
     Args:
-        first: Dialogue that arrived in the same chunk as the tags.
+        first: Dialogue that arrived in the same chunk as the tag.
         stream: The rest of the Ollama response.
 
     Yields:

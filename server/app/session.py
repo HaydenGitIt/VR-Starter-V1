@@ -20,7 +20,7 @@ from typing import Any
 
 import numpy as np
 
-from app import config
+from app import config, mel_state
 from app.engines import dialogue, director, stt, tts
 
 Message = dict[str, Any] | bytes
@@ -93,7 +93,7 @@ class ScenarioSession:
             "capture_sample_rate": self._settings.capture_sample_rate,
             "max_turns": self._rules.max_turns,
             "strikes_allowed": self._rules.strikes_allowed,
-            "progress_to_resolve": self._rules.progress_to_resolve,
+            "progress_to_resolve": self._rules.steps_to_resolve,
         }
 
     @property
@@ -148,11 +148,9 @@ class ScenarioSession:
         self._history: list[dict[str, str]] = []
         self._log: list[dict[str, Any]] = []
         self._turn = 0
-        self._strikes = 0
-        self._progress = 0
+        self._tracker = mel_state.StateTracker(self._rules.levels, self._rules.strikes_allowed)
         self._unparsed = 0
         self._outcome: str | None = None
-        self._emotion = self._rules.opening_emotion  # Mel's latest, for a silent ending
 
     def _begin(self) -> Iterator[Message]:
         """Starts a fresh attempt with Mel's fixed opening line.
@@ -163,11 +161,12 @@ class ScenarioSession:
         self._reset()
         rules = self._rules
         self._history.append({"role": "user", "content": rules.start_token})
-        self._remember(rules.opening_verdict, rules.opening_emotion, rules.opening_line)
+        self._remember(rules.opening_verdict, rules.opening_line)
 
+        emotion = self._tracker.emotion
         if self._opening_audio is None:
-            self._opening_audio = self._tts.synthesise(rules.opening_line, rules.opening_emotion)
-        yield {"type": "tags", "verdict": rules.opening_verdict, "emotion": rules.opening_emotion}
+            self._opening_audio = self._tts.synthesise(rules.opening_line, emotion)
+        yield {"type": "tags", "verdict": rules.opening_verdict, "emotion": emotion}
         yield audio_frame(self._opening_audio)
         yield {"type": "reply", "text": rules.opening_line}
         yield {"type": "turn_end", "ended": False}
@@ -193,9 +192,12 @@ class ScenarioSession:
 
         self._history.append({"role": "user", "content": text})
         judgement = self._director.judge(self._history)
-        if judgement and self._ends_silently(judgement.verdict):
+        if judgement:
+            # Before she speaks, so her line and her voice match where this leaves her.
+            self._tracker.apply(judgement.verdict)
+        if judgement and self._tracker.outcome and not self._speaks_ending(self._tracker.outcome):
             # Decided before any model is called: the ending has nothing for Mel to say.
-            reply = dialogue.Reply(judgement.verdict, self._emotion, (piece for piece in ()))
+            reply = dialogue.Reply(judgement.verdict, (piece for piece in ()))
         else:
             reply = self._generate(judgement)
         self._turn += 1
@@ -204,23 +206,22 @@ class ScenarioSession:
             # A generation fault uses a turn (so faults cannot run the
             # scenario past max_turns) but is never a strike.
             self._unparsed += 1
-            verdict, emotion, line = (
-                "unparsed", self._rules.fallback_emotion, self._rules.fallback_line)
-            self._emotion = emotion
+            verdict, line = "unparsed", self._rules.fallback_line
+            emotion = self._tracker.emotion
             yield {"type": "tags", "verdict": self._rules.fallback_verdict, "emotion": emotion}
             yield from self._speak([line], [])
-            self._remember(self._rules.fallback_verdict, emotion, line)
+            self._remember(self._rules.fallback_verdict, line)
         else:
-            # With a director its verdict counts, whatever tag Mel's model wrote.
             verdict = judgement.verdict if judgement else reply.verdict
-            emotion = self._emotion = reply.emotion
+            if not judgement:
+                self._tracker.apply(verdict)
+            emotion = self._tracker.emotion
             yield {"type": "tags", "verdict": verdict, "emotion": emotion}
             speak = True
-            if outcome := self._score(verdict):
+            if outcome := self._tracker.outcome:
                 self._outcome = outcome
                 yield {"type": "ending", "outcome": outcome}
-                speak = (self._rules.speak_reply_on_success if outcome == "resolved"
-                         else self._rules.speak_reply_on_failure)
+                speak = self._speaks_ending(outcome)
             # Closing the stream stops generation, so no stray audio can
             # arrive after an ending Timeline has started.
             spoken: list[str] = []
@@ -228,7 +229,7 @@ class ScenarioSession:
                 if speak:
                     yield from self._speak(self._spoken_sentences(reply.text), spoken)
             line = " ".join(spoken)
-            self._remember(verdict, emotion, line)
+            self._remember(verdict, line)
 
         yield {"type": "reply", "text": line}
         latency = round(time.monotonic() - started, 3)
@@ -236,7 +237,8 @@ class ScenarioSession:
                           "verdict": verdict, "emotion": emotion, "latency": latency,
                           "director_p": round(judgement.probability, 3) if judgement else None})
         yield {"type": "turn_complete", "turn": self._turn, "verdict": verdict,
-               "emotion": emotion, "latency": latency}
+               "emotion": emotion, "latency": latency, "level": self._tracker.level,
+               "strikes": self._tracker.strikes, "progress": self._tracker.progress}
 
         # Running out of turns is failing to reach her.
         if not self._outcome and self._turn >= self._rules.max_turns:
@@ -251,44 +253,28 @@ class ScenarioSession:
             judgement: The director's verdict for Mel to act out, or None.
 
         Returns:
-            The reply, or None if every attempt was malformed.
+            The reply, or None if every attempt was malformed, which only happens when her
+            own model judges.
         """
+        note = director.STATE_NOTES[self._tracker.emotion]
         for _ in range(self._rules.max_retries + 1):
             try:
-                return self._dialogue.generate(self._history, judgement)
+                return self._dialogue.generate(self._history, note, judgement)
             except dialogue.MalformedReply:
                 continue
         return None
 
-    def _ends_silently(self, verdict: str) -> bool:
-        """Says whether a verdict ends the scenario with nothing for Mel to say.
+    def _speaks_ending(self, outcome: mel_state.Outcome) -> bool:
+        """Says whether Mel speaks her last line on an ending.
 
         Args:
-            verdict: The director's verdict.
+            outcome: The ending reached.
 
         Returns:
-            True if it reaches a threshold whose ending has no spoken line.
+            True if the line is spoken.
         """
-        if verdict == "deescalated":
-            return (self._progress + 1 >= self._rules.progress_to_resolve
-                    and not self._rules.speak_reply_on_success)
-        return (self._strikes + 1 >= self._rules.strikes_allowed
-                and not self._rules.speak_reply_on_failure)
-
-    def _score(self, verdict: str) -> str | None:
-        """Counts a verdict towards the strike or progress thresholds.
-
-        Args:
-            verdict: "deescalated" or "neutral".
-
-        Returns:
-            "resolved" or "disengaged" if a threshold was reached, else None.
-        """
-        if verdict == "deescalated":
-            self._progress += 1
-            return "resolved" if self._progress >= self._rules.progress_to_resolve else None
-        self._strikes += 1
-        return "disengaged" if self._strikes >= self._rules.strikes_allowed else None
+        return (self._rules.speak_reply_on_success if outcome == mel_state.Outcome.RESOLVED
+                else self._rules.speak_reply_on_failure)
 
     def _spoken_sentences(self, pieces: Iterator[str]) -> Iterator[str]:
         """Splits streamed text into sentences as each one completes.
@@ -333,9 +319,9 @@ class ScenarioSession:
         gap = np.zeros(self._settings.sentence_gap_ms * self._settings.playback_sample_rate // 1000,
                        dtype="<f4").tobytes()
         for sentence in sentences:
-            # Mel's emotion tag arrives before any of her dialogue, so an
+            # Her emotion is settled before any of her dialogue, so an
             # engine that can act on it already knows how to say this line.
-            audio = self._tts.synthesise(sentence, self._emotion)
+            audio = self._tts.synthesise(sentence, self._tracker.emotion)
             if audio.size == 0:
                 continue
             if spoken:
@@ -343,15 +329,15 @@ class ScenarioSession:
             spoken.append(sentence)
             yield audio_frame(audio)
 
-    def _remember(self, verdict: str, emotion: str, line: str) -> None:
-        """Adds Mel's line to the history, tagged as the model writes it.
+    def _remember(self, verdict: str, line: str) -> None:
+        """Adds Mel's line to the history, as her model writes it.
 
         Args:
-            verdict: The verdict tag.
-            emotion: The emotion tag.
+            verdict: The verdict, which her model only writes when it is the one judging.
             line: What she said.
         """
-        self._history.append({"role": "assistant", "content": f"<{verdict}><{emotion}>{line}"})
+        judges = isinstance(self._director, director.NoDirector)
+        self._history.append({"role": "assistant", "content": f"<{verdict}>{line}" if judges else line})
 
     def _summary(self) -> Message:
         """Builds the debrief data, in the original server's shape.
@@ -363,8 +349,9 @@ class ScenarioSession:
             "type": "summary",
             "outcome": self._outcome or "ongoing",
             "turns": self._turn,
-            "strikes": self._strikes,
-            "progress": self._progress,
+            "strikes": self._tracker.strikes,
+            "progress": self._tracker.progress,
+            "level": self._tracker.level,
             "unparsed": self._unparsed,
             "log": self._log,
         }

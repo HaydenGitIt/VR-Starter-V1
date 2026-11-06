@@ -1,4 +1,4 @@
-"""Checks a dialogue model's tag format and verdicts before you trust it.
+"""Checks a dialogue model's tag and verdicts before you trust it.
 
 Usage: .venv\\Scripts\\python check_dialogue.py [--model qwen2.5:3b]
 
@@ -63,7 +63,7 @@ def main() -> None:
     opening = [
         {"role": "user", "content": rules.start_token},
         {"role": "assistant",
-         "content": f"<{rules.opening_verdict}><{rules.opening_emotion}>{rules.opening_line}"},
+         "content": f"<{rules.opening_verdict}>{rules.opening_line}"},
     ]
     agreed = malformed = 0
     tag_times = []
@@ -80,7 +80,7 @@ def main() -> None:
         ok = reply.verdict == expected
         agreed += ok
         mark = "ok         " if ok else f"WANTED {expected[:4]}"
-        print(f"  {mark} {reply.verdict:>11}/{reply.emotion:<10} {line!r}\n"
+        print(f"  {mark} {reply.verdict:>11} {line!r}\n"
               f"              Mel: {text}")
 
     print(f"\nVerdicts as expected: {agreed}/{len(CASES)}   "
