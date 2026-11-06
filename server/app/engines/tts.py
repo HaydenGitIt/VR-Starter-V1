@@ -209,8 +209,32 @@ class VoxiTextToSpeech(KokoroTextToSpeech):
 
         # The architecture is stock Kokoro; only the weights are Voxi's,
         # which is why repo_id here still points at the base model.
-        model = kokoro.KModel(
-            repo_id=_KOKORO_REPO, config=config_path, model=weights_path).eval()
+        model = kokoro.KModel(repo_id=_KOKORO_REPO, config=config_path, model=weights_path)
+
+        # REPAIR WHAT KModel QUIETLY FAILED TO LOAD.
+        #
+        # Voxi's checkpoint was saved from a DataParallel-wrapped model, so
+        # every parameter name carries a "module." prefix. KModel tries a
+        # strict load per submodule, and on failure retries with
+        # strict=False - which, when EVERY key is unexpected, loads nothing
+        # at all and says nothing about it. The result is a randomly
+        # initialised model that still produces audio of a plausible
+        # length, just with no speech in it.
+        #
+        # Loading strictly here is the point: a future mismatch should stop
+        # the server rather than ship silence to a trainee.
+        raw = torch.load(weights_path, map_location="cpu", weights_only=True)
+
+        for name, submodule_state in raw.items():
+            if not hasattr(model, name):
+                raise RuntimeError(
+                    f"{self._repo_id}'s checkpoint has a '{name}' section, but Kokoro's "
+                    f"model has no such submodule. The fine-tune does not match this "
+                    f"architecture.")
+
+            getattr(model, name).load_state_dict(_strip_module_prefix(submodule_state))
+
+        model.eval()
 
         # device is passed only when set, so the default path is exactly
         # the call the model card documents. KPipeline takes a device, and
@@ -471,6 +495,24 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
 
 
 _KOKORO_REPO = "hexgrad/Kokoro-82M"
+
+
+def _strip_module_prefix(state: dict) -> dict:
+    """Removes the "module." that DataParallel adds to every parameter name.
+
+    A checkpoint saved from a model wrapped in torch.nn.DataParallel names
+    every parameter "module.<real name>". Loading it into an unwrapped
+    model matches nothing, and Kokoro's loader reacts to that by retrying
+    with strict=False and carrying on - so the failure is silent and the
+    model keeps its random initialisation.
+
+    Args:
+        state: One submodule's state dict, as saved.
+
+    Returns:
+        The same mapping with the prefix removed from any key that has it.
+    """
+    return {key.removeprefix("module."): value for key, value in state.items()}
 
 
 # Mel's four states onto Voxi's eight voicepacks. This is a first guess,

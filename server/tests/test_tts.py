@@ -20,6 +20,36 @@ def test_kokoro_leaves_all_silent_clip_alone() -> None:
     assert tts.KokoroTextToSpeech()._trim(silence).size == 1000
 
 
+def test_strip_module_prefix_unwraps_dataparallel_names() -> None:
+    """Voxi's checkpoint names every parameter "module.<name>".
+
+    Without this, every key is unexpected, Kokoro's loader falls back to
+    strict=False, nothing loads, and the model stays randomly initialised
+    while still producing audio of a plausible length. Silence that looks
+    like success is the worst failure mode there is, so this is tested.
+    """
+    saved = {
+        "module.embeddings.word_embeddings.weight": 1,
+        "module.cnn.0.0.bias": 2,
+    }
+    assert tts._strip_module_prefix(saved) == {
+        "embeddings.word_embeddings.weight": 1,
+        "cnn.0.0.bias": 2,
+    }
+
+
+def test_strip_module_prefix_leaves_clean_names_alone() -> None:
+    """A checkpoint saved without the wrapper passes through unchanged."""
+    clean = {"embeddings.weight": 1, "decode.0.conv1.bias": 2}
+    assert tts._strip_module_prefix(clean) == clean
+
+
+def test_strip_module_prefix_only_strips_the_leading_occurrence() -> None:
+    """"module" inside a name is part of the name, not a prefix to remove."""
+    assert tts._strip_module_prefix({"module.submodule.module.weight": 1}) == {
+        "submodule.module.weight": 1}
+
+
 def test_voxi_picks_a_voicepack_per_emotion_and_falls_back() -> None:
     """Each tag maps to a pack; unknown and empty tags get the fallback.
 
