@@ -1,4 +1,4 @@
-"""Measures faster-qwen3-tts per emotion, to decide whether it can replace Kokoro.
+r"""Measures faster-qwen3-tts per emotion, to decide whether it can replace Kokoro.
 
 The speed factor is seconds to generate per second of speech. Mel needs under
 0.5x, or the trainee waits too long for her to start speaking. Stop the server
