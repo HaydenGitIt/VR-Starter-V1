@@ -88,7 +88,7 @@ director:
     threshold: 0.5            # P(reached her) needed to count as reaching her
 
 text_to_speech:
-  engine: kokoro
+  engine: faster-qwen     # kokoro on a machine without about 8 GB of GPU memory
   kokoro:                 # outputs 24000 Hz: keep audio.playback_sample_rate at 24000
     voice: af_heart       # af_/am_ American, bf_/bm_ British
     speed: 1.0
@@ -98,7 +98,7 @@ text_to_speech:
   # Needs `uv pip install --python .venv -U qwen-tts`; first run downloads
   # several GB. Must be a CustomVoice variant - Base and VoiceDesign expose
   # different methods.
-  qwen:
+  qwen: &qwen
     # A 0.6B CustomVoice also exists, if the 1.7B is too slow or too large
     # to sit beside the dialogue model. Whether its delivery varies as well
     # is a listening test, not a given: compare with check_tts.py.
@@ -122,3 +122,4 @@ text_to_speech:
       softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
       calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
       "": "A woman in her forties speaks at a moderate pace."
+  faster-qwen: *qwen      # same model, voice and instructions, faster runtime

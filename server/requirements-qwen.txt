@@ -11,8 +11,8 @@
 # both depend on it, so a replaced torch shows up far from here.
 #
 # qwen-tts needs transformers==4.57.3, so this replaces the pin in requirements.txt.
-# Laya and the server are not tested on that version: use a separate venv, or
-# requirements-faster-qwen.txt.
+# Laya and the server are not tested on that version, so give it a separate venv.
+# The default engine, faster-qwen, is installed by requirements.txt and needs none of this.
 #
 # The model itself (several GB) downloads on the first warm_up, not now.
 qwen-tts

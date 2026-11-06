@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from app import config
 from app.engines import tts
 
 
@@ -18,6 +19,11 @@ def test_kokoro_leaves_all_silent_clip_alone() -> None:
     """A clip with nothing above the threshold is returned unchanged."""
     silence = np.zeros(1000, dtype=np.float32)
     assert tts.KokoroTextToSpeech()._trim(silence).size == 1000
+
+
+def test_faster_qwen_is_the_configured_engine() -> None:
+    """The config selects it, and its options are Qwen's."""
+    assert isinstance(tts.build(config.load().text_to_speech), tts.FasterQwenTextToSpeech)
 
 
 def test_qwen_picks_the_instruction_for_the_emotion() -> None:

@@ -178,14 +178,7 @@ class QwenTextToSpeech(TextToSpeech):
 
     def warm_up(self) -> None:
         """See base class. Downloads several GB on a cold first run."""
-        # Imported here so fake-only setups never load PyTorch.
-        import torch  # pylint: disable=import-outside-toplevel
-        from qwen_tts import Qwen3TTSModel  # pylint: disable=import-outside-toplevel
-
-        self._model = Qwen3TTSModel.from_pretrained(
-            self._model_id,
-            device_map=self._device,
-            dtype=getattr(torch, self._dtype, torch.float32))
+        self._model = self._load()
 
         # Throwaway synthesis, which also reveals the real output rate. The
         # server resamples nothing, so a mismatch would reach the headset as
@@ -197,6 +190,21 @@ class QwenTextToSpeech(TextToSpeech):
                   f"audio.playback_sample_rate is {self._expected_sample_rate}. "
                   "Set them to match, in config.yaml and PipelineConfig.asset.",
                   flush=True)
+
+    def _load(self) -> object:
+        """Loads the model.
+
+        Returns:
+            An object with Qwen's generate_custom_voice method.
+        """
+        # Imported here so fake-only setups never load PyTorch.
+        import torch  # pylint: disable=import-outside-toplevel
+        from qwen_tts import Qwen3TTSModel  # pylint: disable=import-outside-toplevel
+
+        return Qwen3TTSModel.from_pretrained(
+            self._model_id,
+            device_map=self._device,
+            dtype=getattr(torch, self._dtype, torch.float32))
 
     def synthesise(self, text: str, emotion: str = "") -> np.ndarray:
         """See base class."""
@@ -246,6 +254,20 @@ class QwenTextToSpeech(TextToSpeech):
         return self._instructions.get(emotion, self._instructions.get("", ""))
 
 
+class FasterQwenTextToSpeech(QwenTextToSpeech):
+    """The same voice through faster-qwen3-tts, which runs the model as CUDA graphs."""
+
+    def _load(self) -> object:
+        """See base class."""
+        # pylint: disable-next=import-outside-toplevel
+        from faster_qwen3_tts import FasterQwen3TTS
+
+        model = FasterQwen3TTS.from_pretrained(
+            self._model_id, device=self._device, dtype=self._dtype)
+        model.warmup()
+        return model
+
+
 # Lead with the speaker's age and sex: strong emotion prompts are known to
 # drift the voice, and stating who is speaking first holds it steady.
 # Overridable per deployment from the qwen options block in config.yaml.
@@ -286,6 +308,7 @@ _ENGINES: dict[str, type[TextToSpeech]] = {
     "fake": FakeTextToSpeech,
     "kokoro": KokoroTextToSpeech,
     "qwen": QwenTextToSpeech,
+    "faster-qwen": FasterQwenTextToSpeech,
 }
 
 

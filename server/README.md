@@ -148,10 +148,10 @@ assumption. Much larger than Kokoro: several GB downloaded on first start
 and a 1.7B model resident on the GPU, so check it fits alongside the
 dialogue model before switching a low-memory machine over.
 
-To trial `faster-qwen3-tts` without touching `.venv`, follow the steps at the top of
-`requirements-faster-qwen.txt`. It only loads on `transformers` 5.15.1 or 5.16.1, and
-needs under 0.5x on `check_faster_qwen.py` to be usable (8.9x on the 6 GB dev PC, where
-it barely fits).
+On this branch `text_to_speech.engine` is `faster-qwen`, the same voice through
+`faster-qwen3-tts`. `requirements.txt` installs it, and it only loads on `transformers`
+5.15.1 or 5.16.1. It needs under 0.5x realtime on `check_tts.py` to be usable (8.9x on
+the 6 GB dev PC, where it barely fits, so that machine should use Kokoro).
 
 ### Sending recorded speech
 
