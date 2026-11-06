@@ -71,6 +71,14 @@ dialogue:
     # messages (the opening line first). 8192 fits a full run; it costs GPU
     # memory (~0.5 GB more than 4096 for llama3:8b).
     context_length: 8192
+    # Mel repeated a whole line word for word two turns apart. Ollama's
+    # defaults are 1.1 over the last 64 tokens - about one of her replies,
+    # so the penalty cannot see the turn before. 512 covers a whole
+    # conversation. Not larger: that reaches the system prompt and starts
+    # penalising the words the scenario is made of ("eighty dollars",
+    # "Ava"), which have to recur.
+    repeat_penalty: 1.15
+    repeat_last_n: 512
     # How long Ollama keeps the model loaded after each request. Its default
     # (5m) unloads it while the server waits for a trainee, so the next turn
     # pays a cold reload. -1 = until Ollama stops; `ollama stop MODEL` frees it.
