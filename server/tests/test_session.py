@@ -43,12 +43,13 @@ class Scripted(dialogue.Dialogue):
 
 
 def _session(*script: tuple[str, str] | None, judge: director.Director | None = None,
-             **rules: object) -> session.ScenarioSession:
+             chunk_sentences: bool = True, **rules: object) -> session.ScenarioSession:
     """Creates a session with fake engines and a scripted Mel.
 
     Args:
         *script: Mel's replies, in order.
         judge: The director, or None for Mel's own tags to decide.
+        chunk_sentences: Whether to speak each sentence as it completes.
         **rules: Overrides for the default scenario rules.
 
     Returns:
@@ -59,6 +60,7 @@ def _session(*script: tuple[str, str] | None, judge: director.Director | None = 
         capture_sample_rate=16000, playback_sample_rate=24000, sentence_gap_ms=90,
         scenario=dataclasses.replace(_RULES, **rules),
         speech_to_text=_FAKE, dialogue=_FAKE, text_to_speech=_FAKE,
+        chunk_sentences=chunk_sentences,
     )
     return session.ScenarioSession(
         settings, stt.FakeSpeechToText(), Scripted(*script), tts.FakeTextToSpeech(),
@@ -121,6 +123,13 @@ def test_turn_order_and_sentence_gaps() -> None:
     assert len(frames) == 3  # sentence, gap, sentence
     assert not any(frames[1])  # the gap is silence
     assert _find(messages, "turn_complete")["emotion"] == "agitated"
+
+
+def test_whole_reply_is_spoken_in_one_go_without_chunking() -> None:
+    """One synthesis for the reply, so no frames or gaps between its sentences."""
+    messages = _say(_session(_GOOD, chunk_sentences=False))
+    assert len([m for m in messages if isinstance(m, bytes)]) == 1
+    assert _find(messages, "reply")["text"] == "Thank you. That helps."
 
 
 def test_third_strike_cuts_before_any_audio() -> None:

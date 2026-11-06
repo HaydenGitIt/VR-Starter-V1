@@ -308,6 +308,8 @@ class ScenarioSession:
     def _speak(self, sentences: Iterable[str], spoken: list[str]) -> Iterator[Message]:
         """Synthesises sentences as they arrive, with a gap between each.
 
+        With chunk_sentences off they are joined and spoken as one, once all have arrived.
+
         Args:
             sentences: The sentences to speak.
             spoken: Receives each sentence that produced audio, so the log
@@ -318,6 +320,8 @@ class ScenarioSession:
         """
         gap = np.zeros(self._settings.sentence_gap_ms * self._settings.playback_sample_rate // 1000,
                        dtype="<f4").tobytes()
+        if not self._settings.chunk_sentences:
+            sentences = [reply] if (reply := " ".join(sentences)) else []
         for sentence in sentences:
             # Her emotion is settled before any of her dialogue, so an
             # engine that can act on it already knows how to say this line.

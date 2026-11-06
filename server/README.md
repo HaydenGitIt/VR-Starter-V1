@@ -157,6 +157,10 @@ instruction is always known by the time a sentence is spoken.
 uv pip install --python .venv -r requirements-qwen.txt
 ```
 
+Two settings trade steadiness against speed: `audio.chunk_sentences: false` speaks
+Mel's whole reply in one go instead of sentence by sentence, and
+`text_to_speech.faster-qwen.temperature` lowers the randomness of her delivery.
+
 Edit `text_to_speech.qwen.instructions` in `config.yaml` to change how each
 emotion sounds, and `speaker` to change the voice itself. Fidelity across
 emotions is uneven, so those instructions want listening tests rather than

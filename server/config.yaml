@@ -13,6 +13,10 @@ audio:
   capture_sample_rate: 16000
   playback_sample_rate: 24000
   sentence_gap_ms: 90           # silence between spoken sentences
+  # true: speak each sentence as soon as it is ready, so Mel starts sooner. Each is
+  # generated separately, so an engine like Qwen can drift between them.
+  # false: wait for her whole reply and speak it in one go. Steadier, slower to start.
+  chunk_sentences: true
 
 # Values and reasoning carried over from the original DeescalationServer.
 scenario:
@@ -177,6 +181,7 @@ text_to_speech:
     device: cuda                  # not cuda:0 - a different loader argument
     dtype: bfloat16
     attn_implementation: sdpa     # needs nothing extra installed
+    temperature: 0.3              # lower is steadier, but can flatten her delivery
     expected_sample_rate: 24000
     instructions:
       agitated: "An American woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."

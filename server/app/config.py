@@ -83,6 +83,8 @@ class Settings:
         capture_sample_rate: Rate of incoming trainee audio, in Hz.
         playback_sample_rate: Rate of outgoing synthesised audio, in Hz.
         sentence_gap_ms: Silence inserted between spoken sentences.
+        chunk_sentences: True to speak each sentence as it completes, False to speak
+            Mel's whole reply in one go.
         scenario: Scenario rules and fixed lines.
         speech_to_text: Which STT engine to use.
         dialogue: Which dialogue engine to use.
@@ -101,6 +103,7 @@ class Settings:
     text_to_speech: EngineSettings
     director: EngineSettings = dataclasses.field(
         default_factory=lambda: EngineSettings(engine="none", options={}))
+    chunk_sentences: bool = True
 
 
 def load(overrides: Sequence[str] = ()) -> Settings:
@@ -140,6 +143,7 @@ def load(overrides: Sequence[str] = ()) -> Settings:
         dialogue=_engine(raw["dialogue"]),
         text_to_speech=_engine(raw["text_to_speech"]),
         director=_engine(raw["director"]),
+        chunk_sentences=raw["audio"]["chunk_sentences"],
     )
 
 

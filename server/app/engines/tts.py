@@ -340,6 +340,7 @@ class QwenTextToSpeech(TextToSpeech):
         self._silence_threshold = silence_threshold
         self._padding = edge_padding_ms * expected_sample_rate // 1000
         self._model = None
+        self._generation_options: dict[str, float] = {}
 
     def warm_up(self) -> None:
         """See base class. Downloads several GB on a cold first run."""
@@ -388,7 +389,8 @@ class QwenTextToSpeech(TextToSpeech):
         Returns:
             The mono float32 audio and the rate the model produced it at.
         """
-        options = {"text": text, "language": self._language, "speaker": self._speaker}
+        options = {"text": text, "language": self._language, "speaker": self._speaker,
+                   **self._generation_options}
         if instruct:
             options["instruct"] = instruct
 
@@ -450,6 +452,7 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
         device: str = "cuda",
         dtype: str = "bfloat16",
         attn_implementation: str = "sdpa",
+        temperature: float = 0.9,
         instructions: dict[str, str] | None = None,
         expected_sample_rate: int = 24000,
         silence_threshold: float = 0.01,
@@ -465,6 +468,7 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
                 a different argument from the stock library's device_map.
             dtype: Torch dtype name; this loader accepts it as a string.
             attn_implementation: "sdpa" needs nothing extra installed.
+            temperature: Sampling temperature. Lower is steadier, but can flatten delivery.
             instructions: As for QwenTextToSpeech.
             expected_sample_rate: As for QwenTextToSpeech.
             silence_threshold: As for QwenTextToSpeech.
@@ -482,6 +486,8 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
             edge_padding_ms=edge_padding_ms)
 
         self._attn_implementation = attn_implementation
+        self._temperature = temperature
+        self._generation_options = {"temperature": temperature}
 
     def warm_up(self) -> None:
         """See base class.
@@ -498,6 +504,9 @@ class FasterQwenTextToSpeech(QwenTextToSpeech):
             device=self._device,
             dtype=self._dtype,
             attn_implementation=self._attn_implementation)
+        # The temperature passed per call only reaches the talker. The predictor's is baked
+        # into its CUDA graph, captured by the first synthesis below.
+        self._model.predictor_graph.temperature = self._temperature
 
         self._warm_and_check()
 
