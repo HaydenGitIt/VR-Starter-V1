@@ -71,6 +71,14 @@ dialogue:
     # messages (the opening line first). 8192 fits a full run; it costs GPU
     # memory (~0.5 GB more than 4096 for llama3:8b).
     context_length: 8192
+    # Mel repeated a whole line word for word two turns apart. Ollama's
+    # defaults are 1.1 over the last 64 tokens - about one of her replies,
+    # so the penalty cannot see the turn before. 512 covers a whole
+    # conversation. Not larger: that reaches the system prompt and starts
+    # penalising the words the scenario is made of ("eighty dollars",
+    # "Ava"), which have to recur.
+    repeat_penalty: 1.15
+    repeat_last_n: 512
     # How long Ollama keeps the model loaded after each request. Its default
     # (5m) unloads it while the server waits for a trainee, so the next turn
     # pays a cold reload. -1 = until Ollama stops; `ollama stop MODEL` frees it.
@@ -93,12 +101,43 @@ text_to_speech:
     voice: af_heart       # af_/am_ American, bf_/bm_ British
     speed: 1.0
     device: null          # null = GPU if PyTorch has CUDA, else CPU
+  # Voxi: an expressive Kokoro fine-tune with a voicepack per emotion.
+  # Runs at Kokoro's speed because it is Kokoro, so unlike qwen it can
+  # keep ahead of playback. Needs `uv pip install --python .venv
+  # huggingface-hub` (already present) and downloads ~400 MB on first use.
+  #
+  # TRADE-OFFS, both worth hearing before trusting it: eight fixed
+  # emotions rather than free-form instructions, and a British-English
+  # voice trained on ~1.9 hours of one speaker, where kokoro above is
+  # American. The fine-tune publishes no evaluation.
+  voxi:
+    # The model card and its own usage snippet disagree on the repo. If
+    # the download 404s, try Joshuant/voxi-tts instead.
+    repo_id: IOTEverythin/voxi-tts
+    speed: 1.0
+    device: null          # null = GPU if PyTorch has CUDA, else CPU
+    # Mel's four states onto Voxi's eight packs. A first guess, not a
+    # finding. The eight are: bf_neutral, bf_happy, bf_sad, bf_angry,
+    # bf_excited, bf_disgust, bf_sarcastic, bf_surprised.
+    #
+    # Two things to listen for. "angry" is the nearest pack to agitated,
+    # but Mel is upset about money, not aggressive, and she never
+    # escalates - if it reads as shouting, try bf_surprised or bf_sad.
+    # And softening and calm both land on neutral, flattening the half of
+    # the arc where the trainee's work shows; try bf_sad for softening if
+    # the two need separating.
+    voicepacks:
+      agitated: bf_angry
+      distressed: bf_sad
+      softening: bf_neutral
+      calm: bf_neutral
+      "": bf_neutral
   # Qwen3-TTS CustomVoice. Unlike Kokoro it varies delivery per sentence
   # from Mel's emotion tag, which is the signal the trainee is reading.
   # Needs `uv pip install --python .venv -U qwen-tts`; first run downloads
   # several GB. Must be a CustomVoice variant - Base and VoiceDesign expose
   # different methods.
-  qwen: &qwen
+  qwen:
     # A 0.6B CustomVoice also exists, if the 1.7B is too slow or too large
     # to sit beside the dialogue model. Whether its delivery varies as well
     # is a listening test, not a given: compare with check_tts.py.
@@ -122,4 +161,24 @@ text_to_speech:
       softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
       calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
       "": "A woman in her forties speaks at a moderate pace."
-  faster-qwen: *qwen      # same model, voice and instructions, faster runtime
+  # The same models through faster-qwen3-tts, which captures the decode
+  # step as a CUDA graph. The stock library runs at ~2x real time, i.e.
+  # slower than playback, because of ~500 kernel launches per step; this
+  # replays them as one. requirements.txt installs it; on a 50-series GPU
+  # it also needs a cu128 PyTorch 2.7+.
+  # Options are the same as `qwen` above, except device ("cuda", not
+  # "cuda:0") and attn_implementation.
+  faster-qwen:
+    model: Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+    speaker: Vivian
+    language: English
+    device: cuda                  # not cuda:0 - a different loader argument
+    dtype: bfloat16
+    attn_implementation: sdpa     # needs nothing extra installed
+    expected_sample_rate: 24000
+    instructions:
+      agitated: "A woman in her forties, tense and frustrated, speaks quickly with clipped, pressured energy."
+      distressed: "A woman in her forties, upset and close to tears, speaks quietly with a wavering, unsteady voice."
+      softening: "A woman in her forties, still guarded but beginning to relax, speaks at a moderate pace with lowered energy."
+      calm: "A woman in her forties speaks calmly and evenly at a moderate pace with warm, settled energy."
+      "": "A woman in her forties speaks at a moderate pace."

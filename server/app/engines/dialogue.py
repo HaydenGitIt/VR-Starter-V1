@@ -107,6 +107,8 @@ class OllamaDialogue(Dialogue):
         max_tokens: int = 55,
         tag_deadline_chars: int = 60,
         context_length: int = 8192,
+        repeat_penalty: float = 1.15,
+        repeat_last_n: int = 512,
         keep_alive: float | str = -1,
         host: str | None = None,
     ) -> None:
@@ -122,6 +124,16 @@ class OllamaDialogue(Dialogue):
             context_length: Tokens the model can see (Ollama's num_ctx). If
                 the conversation outgrows it, Ollama silently drops the
                 oldest messages.
+            repeat_penalty: How much to discourage tokens already in the
+                window below. Ollama's default of 1.1 let Mel repeat a
+                whole line verbatim two turns apart.
+            repeat_last_n: How many recent tokens that penalty looks back
+                over. Ollama's default of 64 is about one of Mel's replies,
+                so it cannot see the turn before. Sized here to cover a
+                whole conversation instead. Deliberately NOT the full
+                context: that would reach the system prompt and penalise
+                the words the scenario is made of - "eighty dollars",
+                "Ava" - which must recur.
             keep_alive: How long Ollama keeps the model loaded after each
                 request: -1 for as long as Ollama runs, or e.g. "30m".
             host: Ollama URL, or None for the default (localhost:11434).
@@ -130,7 +142,8 @@ class OllamaDialogue(Dialogue):
         self._prompt = (_SERVER_DIR / prompt).read_text(encoding="utf-8")
         # Every request must ask for the same num_ctx, or Ollama reloads the model.
         self._options = {
-            "temperature": temperature, "num_predict": max_tokens, "num_ctx": context_length}
+            "temperature": temperature, "num_predict": max_tokens, "num_ctx": context_length,
+            "repeat_penalty": repeat_penalty, "repeat_last_n": repeat_last_n}
         self._keep_alive = keep_alive
         self._tag_deadline_chars = tag_deadline_chars
         self._client = ollama.Client(host)

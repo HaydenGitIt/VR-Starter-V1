@@ -5,7 +5,7 @@ numpy
 faster-whisper
 ollama
 kokoro
-# The default voice on this branch. It accepts transformers up to 6, but only 5.15.1
+# The default voice. It accepts transformers up to 6, but only 5.15.1
 # and 5.16.1 load its speech codec: from 5.17.0 it fails with "MimiConfig has no
 # rope_theta". Laya and Kokoro both work on 5.16.1.
 faster-qwen3-tts==0.5.4
