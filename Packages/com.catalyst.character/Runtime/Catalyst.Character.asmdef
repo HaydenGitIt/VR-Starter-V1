@@ -1,0 +1,17 @@
+{
+    "name": "Catalyst.Character",
+    "rootNamespace": "catalyst.xr67",
+    "references": [
+        "UniTask",
+        "soupday.cc3_unity_tools.project_runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

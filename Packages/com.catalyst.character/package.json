@@ -1,0 +1,13 @@
+{
+  "name": "com.catalyst.character",
+  "version": "0.1.0",
+  "displayName": "Catalyst Character",
+  "description": "Living-character drivers for a Reallusion Character Creator export: lip sync, conversational gaze, procedural idle life (seated or standing), mood-driven expression and speaking loops, Claude conversation, ElevenLabs speech-to-text and voice.",
+  "unity": "6000.0",
+  "author": {
+    "name": "Catalyst VR"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.2"
+  }
+}

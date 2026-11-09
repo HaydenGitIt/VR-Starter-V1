@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 133fe293da0d86444b90214e23fbac5d, type: 3}
+  m_Name: MelAnimationMenuData
+  m_EditorClassIdentifier: Assembly-CSharp::MelAnimationMenuData
+  controller: {fileID: 9100000, guid: b24715d7e7c33c244b4cc922aab43707, type: 2}
+  baseAnimations:
+  - label: Idle 01
+    statePath: Base Layer.Idle01
+    parameterIndex: 8
+  - label: Idle 02
+    statePath: Base Layer.Idle02
+    parameterIndex: 7
+  - label: Idle 03
+    statePath: Base Layer.Idle03
+    parameterIndex: 2
+  - label: Idle Hands Hips
+    statePath: Base Layer.Idle_HandsHips
+    parameterIndex: 1
+  - label: Idle Hands Front
+    statePath: Base Layer.Idle_HandsFront
+    parameterIndex: 0
+  - label: Idle Crossed Arms 02
+    statePath: Base Layer.Idle_CrossedArms02
+    parameterIndex: 3
+  - label: Idle Foot Tapping
+    statePath: Base Layer.Idle_FootTapping
+    parameterIndex: 4
+  - label: Shake Head
+    statePath: Base Layer.ShakeHead
+    parameterIndex: 5
+  - label: Throw Up Hands
+    statePath: Base Layer.ThrowUpHands
+    parameterIndex: 6
+  - label: Watch Check
+    statePath: Base Layer.WatchCheck
+    parameterIndex: 9
+  faceAnimations:
+  - label: Idle 01
+    statePath: Face.Idle01
+    parameterIndex: 2
+  - label: Face Anim Test
+    statePath: Face.FaceAnimTest
+    parameterIndex: 0
+  - label: Sad
+    statePath: Face.Sad
+    parameterIndex: 4
+  - label: Anger
+    statePath: Face.Anger
+    parameterIndex: 1
+  - label: Angry 01
+    statePath: Face.Angry01
+    parameterIndex: 7
+  - label: Angry 02
+    statePath: Face.Angry02
+    parameterIndex: 8
+  - label: Angry 03
+    statePath: Face.Angry03
+    parameterIndex: 9
+  - label: Angry 04
+    statePath: Face.Angry04
+    parameterIndex: 10
+  - label: Angry 05
+    statePath: Face.Angry05
+    parameterIndex: 11
+  - label: Angry 06
+    statePath: Face.Angry06
+    parameterIndex: 12
+  - label: Angry 07
+    statePath: Face.Angry07
+    parameterIndex: 13
+  - label: Angry 08
+    statePath: Face.Angry08
+    parameterIndex: 14
+  - label: Angry 09
+    statePath: Face.Angry09
+    parameterIndex: 15
+  - label: Angry 10
+    statePath: Face.Angry10
+    parameterIndex: 16
+  - label: Smile
+    statePath: Face.Smile
+    parameterIndex: 5
+  - label: Smile 2
+    statePath: Face.Smile2
+    parameterIndex: 6
+  - label: Happy 01
+    statePath: Face.Happy01
+    parameterIndex: 17
+  - label: Happy 02
+    statePath: Face.Happy02
+    parameterIndex: 18
+  - label: Happy 03
+    statePath: Face.Happy03
+    parameterIndex: 19
+  - label: Happy 04
+    statePath: Face.Happy04
+    parameterIndex: 20
+  - label: Happy 05
+    statePath: Face.Happy05
+    parameterIndex: 21
+  - label: Happy 06
+    statePath: Face.Happy06
+    parameterIndex: 22
+  - label: Big Grin
+    statePath: Face.BigGrin
+    parameterIndex: 3
+  defaultBlendTime: 0.5

@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+Assets/xr67/Characters/**/FaceOverrides/*.anim filter=lfs diff=lfs merge=lfs -text
+*_Wrinkle_DiffuseArray.asset filter=lfs diff=lfs merge=lfs -text
+*_Wrinkle_NormalArray.asset filter=lfs diff=lfs merge=lfs -text
+*_MicroN.png filter=lfs diff=lfs merge=lfs -text

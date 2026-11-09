@@ -171,7 +171,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_MaterialPropertyBlockHelper: {fileID: 863512645795027999}
-  m_ColorPropertyName: _BaseColor
+  m_ColorPropertyName: _UnlitColor
 --- !u!1 &7285531401416438276
 GameObject:
   m_ObjectHideFlags: 0
@@ -343,7 +343,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_MaterialPropertyBlockHelper: {fileID: 6212858538863823644}
-  m_ColorPropertyName: _BaseColor
+  m_ColorPropertyName: _UnlitColor
 --- !u!1 &7734889806894075718
 GameObject:
   m_ObjectHideFlags: 0

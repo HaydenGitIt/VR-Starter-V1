@@ -1,0 +1,588 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2a5126d30bd5f43bb7ba469cdaed9a, type: 3}
+  m_Name: Mel Behaviour Profile
+  m_EditorClassIdentifier: 
+  reading:
+    baseLoop: {fileID: -2443204880510185270, guid: 198501ef98434a249a52214061e21de5, type: 3}
+    loops: []
+    timerOneShots: 1
+    baseSpeedRange: {x: 0.95, y: 1.05}
+    baseStartOffset: -1
+    basePhaseJitter: 0
+    modeBlendSeconds: 0.8
+    oneShotInterval: {x: 15, y: 40}
+    oneShots:
+    - label: 
+      clip: {fileID: 1141715381034549404, guid: 4f8f32058295cb64fabd5ffce080a31b, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 3192777233909759471, guid: 0177c5c3c1b6d394a8e54e9e561ec120, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 5168983729782113529, guid: 221ac6a55a00b344dad0a3fdf6477efd, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: -8723105782984769915, guid: d29bdbfe066c02541ab6beefef5f2314, type: 3}
+      mask: {fileID: 0}
+      weight: 0.8
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: -8496034883718302899, guid: e2b620e273c935a41bdc7abe859fa5bf, type: 3}
+      mask: {fileID: 0}
+      weight: 0.8
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 613494369224692196, guid: cbfe41b5932db5542af632c383be9282, type: 3}
+      mask: {fileID: 0}
+      weight: 0.6
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 5235124571693469696, guid: c7628a17097de9f4983a5a5206f8f7db, type: 3}
+      mask: {fileID: 0}
+      weight: 0.6
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    faceAgitationFloor: -1
+    gaze:
+      enabled: 0
+      engageAngle: 15
+      releaseAngle: 35
+      lockDuration: {x: 2.5, y: 6}
+      cooldown: {x: 5, y: 12}
+      lockInRate: 4
+      lockOutRate: 2
+      headRate: 3.5
+      headFollow: 0.6
+      maxHeadYaw: 25
+      maxHeadPitch: 15
+      driveEyes: 1
+    idle:
+      enabled: 1
+      intensity: 0.7
+      stance: 1
+      breathsPerMinute: 14
+      breathVariation: 2
+      chestPitchDegrees: 1.5
+      shoulderRiseDegrees: 0.8
+      swayDegrees: {x: 1.5, y: 1, z: 1}
+      swayFrequency: 0.08
+      shiftInterval: {x: 20, y: 60}
+      shiftRollDegrees: 3.5
+      shiftBlendSeconds: 2
+      shiftLateralCentimetres: 3
+      standingRollScale: 0.25
+      armSwayDegrees: 0.4
+      neckDriftDegrees: 1.5
+      neckDriftFrequency: 0.05
+      faceEnabled: 1
+      faceIntensity: 1
+      restingSmile: 0.15
+      animateBrows: 0
+      driftAmount: 6
+      driftFrequency: 0.06
+      eventInterval: {x: 6, y: 18}
+      eventStrength: 22
+      blinkEnabled: 1
+      blinkInterval: {x: 2.5, y: 5.5}
+      doubleBlinkChance: 0.12
+  listening:
+    baseLoop: {fileID: -2443204880510185270, guid: 198501ef98434a249a52214061e21de5, type: 3}
+    loops: []
+    timerOneShots: 1
+    baseSpeedRange: {x: 0.95, y: 1.05}
+    baseStartOffset: -1
+    basePhaseJitter: 0
+    modeBlendSeconds: 0.8
+    oneShotInterval: {x: 15, y: 40}
+    oneShots:
+    - label: 
+      clip: {fileID: 1141715381034549404, guid: 4f8f32058295cb64fabd5ffce080a31b, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 3192777233909759471, guid: 0177c5c3c1b6d394a8e54e9e561ec120, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 5168983729782113529, guid: 221ac6a55a00b344dad0a3fdf6477efd, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: -8723105782984769915, guid: d29bdbfe066c02541ab6beefef5f2314, type: 3}
+      mask: {fileID: 0}
+      weight: 0.8
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: -8496034883718302899, guid: e2b620e273c935a41bdc7abe859fa5bf, type: 3}
+      mask: {fileID: 0}
+      weight: 0.8
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 613494369224692196, guid: cbfe41b5932db5542af632c383be9282, type: 3}
+      mask: {fileID: 0}
+      weight: 0.6
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    - label: 
+      clip: {fileID: 5235124571693469696, guid: c7628a17097de9f4983a5a5206f8f7db, type: 3}
+      mask: {fileID: 0}
+      weight: 0.6
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.6
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: 
+    faceAgitationFloor: -1
+    gaze:
+      enabled: 0
+      engageAngle: 15
+      releaseAngle: 35
+      lockDuration: {x: 2.5, y: 6}
+      cooldown: {x: 5, y: 12}
+      lockInRate: 4
+      lockOutRate: 2
+      headRate: 3.5
+      headFollow: 0.6
+      maxHeadYaw: 25
+      maxHeadPitch: 15
+      driveEyes: 1
+    idle:
+      enabled: 1
+      intensity: 0.7
+      stance: 1
+      breathsPerMinute: 14
+      breathVariation: 2
+      chestPitchDegrees: 1.5
+      shoulderRiseDegrees: 0.8
+      swayDegrees: {x: 1.5, y: 1, z: 1}
+      swayFrequency: 0.08
+      shiftInterval: {x: 20, y: 60}
+      shiftRollDegrees: 3.5
+      shiftBlendSeconds: 2
+      shiftLateralCentimetres: 3
+      standingRollScale: 0.25
+      armSwayDegrees: 0.4
+      neckDriftDegrees: 1.5
+      neckDriftFrequency: 0.05
+      faceEnabled: 1
+      faceIntensity: 1
+      restingSmile: 0.15
+      animateBrows: 0
+      driftAmount: 6
+      driftFrequency: 0.06
+      eventInterval: {x: 6, y: 18}
+      eventStrength: 22
+      blinkEnabled: 1
+      blinkInterval: {x: 2.5, y: 5.5}
+      doubleBlinkChance: 0.12
+  calm:
+    baseLoop: {fileID: -2443204880510185270, guid: 198501ef98434a249a52214061e21de5, type: 3}
+    loops:
+    - label: relaxed idle
+      clip: {fileID: -2443204880510185270, guid: 198501ef98434a249a52214061e21de5, type: 3}
+      weight: 1
+      holdSeconds: {x: 18, y: 35}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: idle shift
+      clip: {fileID: 1141715381034549404, guid: 4f8f32058295cb64fabd5ffce080a31b, type: 3}
+      weight: 1
+      holdSeconds: {x: 15, y: 30}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: thinking idle
+      clip: {fileID: 3192777233909759471, guid: 0177c5c3c1b6d394a8e54e9e561ec120, type: 3}
+      weight: 0.7
+      holdSeconds: {x: 15, y: 30}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: hands front
+      clip: {fileID: 5168983729782113529, guid: 221ac6a55a00b344dad0a3fdf6477efd, type: 3}
+      weight: 0.4
+      holdSeconds: {x: 12, y: 25}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    timerOneShots: 0
+    baseSpeedRange: {x: 0.95, y: 1.05}
+    baseStartOffset: -1
+    basePhaseJitter: 0
+    modeBlendSeconds: 1.2
+    oneShotInterval: {x: 20, y: 40}
+    oneShots: []
+    faceAgitationFloor: -1
+    gaze:
+      enabled: 0
+      engageAngle: 15
+      releaseAngle: 35
+      lockDuration: {x: 2.5, y: 6}
+      cooldown: {x: 5, y: 12}
+      lockInRate: 4
+      lockOutRate: 2
+      headRate: 3.5
+      headFollow: 0.6
+      maxHeadYaw: 25
+      maxHeadPitch: 15
+      driveEyes: 1
+    idle:
+      enabled: 1
+      intensity: 0.7
+      stance: 1
+      breathsPerMinute: 14
+      breathVariation: 2
+      chestPitchDegrees: 1.5
+      shoulderRiseDegrees: 0.8
+      swayDegrees: {x: 1.5, y: 1, z: 1}
+      swayFrequency: 0.08
+      shiftInterval: {x: 20, y: 60}
+      shiftRollDegrees: 3.5
+      shiftBlendSeconds: 2
+      shiftLateralCentimetres: 3
+      standingRollScale: 0.25
+      armSwayDegrees: 0.4
+      neckDriftDegrees: 1.5
+      neckDriftFrequency: 0.05
+      faceEnabled: 1
+      faceIntensity: 1
+      restingSmile: 0.15
+      animateBrows: 0
+      driftAmount: 6
+      driftFrequency: 0.06
+      eventInterval: {x: 6, y: 18}
+      eventStrength: 22
+      blinkEnabled: 1
+      blinkInterval: {x: 2.5, y: 5.5}
+      doubleBlinkChance: 0.12
+  transition:
+    baseLoop: {fileID: 3192777233909759471, guid: 0177c5c3c1b6d394a8e54e9e561ec120, type: 3}
+    loops:
+    - label: thinking idle
+      clip: {fileID: 3192777233909759471, guid: 0177c5c3c1b6d394a8e54e9e561ec120, type: 3}
+      weight: 1
+      holdSeconds: {x: 18, y: 32}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: hands front
+      clip: {fileID: 5168983729782113529, guid: 221ac6a55a00b344dad0a3fdf6477efd, type: 3}
+      weight: 0.5
+      holdSeconds: {x: 15, y: 28}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: idle shift
+      clip: {fileID: 1141715381034549404, guid: 4f8f32058295cb64fabd5ffce080a31b, type: 3}
+      weight: 0.7
+      holdSeconds: {x: 15, y: 28}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    timerOneShots: 0
+    baseSpeedRange: {x: 0.95, y: 1.05}
+    baseStartOffset: -1
+    basePhaseJitter: 0
+    modeBlendSeconds: 1
+    oneShotInterval: {x: 20, y: 40}
+    oneShots:
+    - label: head shake
+      clip: {fileID: 6927327991618980751, guid: 4fc09776ccd86c94daf0bbaf3e1623e6, type: 3}
+      mask: {fileID: 31900000, guid: 7b4de0f76a4d40bab6606264a9fe1602, type: 2}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 1.4
+      blendIn: 0.5
+      blendOut: 0.7
+      suppressGaze: 1
+      offerToLlm: 1
+      llmDescription: "shakes her head \u2014 disagreeing, doubting, or not accepting
+        what she hears"
+    - label: frown
+      clip: {fileID: 0}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.4
+      blendOut: 0.6
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: "frowns \u2014 displeased, worried or unconvinced"
+    faceAgitationFloor: -1
+    gaze:
+      enabled: 0
+      engageAngle: 15
+      releaseAngle: 35
+      lockDuration: {x: 2.5, y: 6}
+      cooldown: {x: 5, y: 12}
+      lockInRate: 4
+      lockOutRate: 2
+      headRate: 3.5
+      headFollow: 0.6
+      maxHeadYaw: 25
+      maxHeadPitch: 15
+      driveEyes: 1
+    idle:
+      enabled: 1
+      intensity: 0.7
+      stance: 1
+      breathsPerMinute: 14
+      breathVariation: 2
+      chestPitchDegrees: 1.5
+      shoulderRiseDegrees: 0.8
+      swayDegrees: {x: 1.5, y: 1, z: 1}
+      swayFrequency: 0.08
+      shiftInterval: {x: 20, y: 60}
+      shiftRollDegrees: 3.5
+      shiftBlendSeconds: 2
+      shiftLateralCentimetres: 3
+      standingRollScale: 0.25
+      armSwayDegrees: 0.4
+      neckDriftDegrees: 1.5
+      neckDriftFrequency: 0.05
+      faceEnabled: 1
+      faceIntensity: 1
+      restingSmile: 0.15
+      animateBrows: 0
+      driftAmount: 6
+      driftFrequency: 0.06
+      eventInterval: {x: 6, y: 18}
+      eventStrength: 22
+      blinkEnabled: 1
+      blinkInterval: {x: 2.5, y: 5.5}
+      doubleBlinkChance: 0.12
+  agitated:
+    baseLoop: {fileID: -8723105782984769915, guid: d29bdbfe066c02541ab6beefef5f2314, type: 3}
+    loops:
+    - label: crossed arms
+      clip: {fileID: -8723105782984769915, guid: d29bdbfe066c02541ab6beefef5f2314, type: 3}
+      weight: 1
+      holdSeconds: {x: 20, y: 35}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: hands front
+      clip: {fileID: 5168983729782113529, guid: 221ac6a55a00b344dad0a3fdf6477efd, type: 3}
+      weight: 0.3
+      holdSeconds: {x: 20, y: 35}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: foot tapping
+      clip: {fileID: 5235124571693469696, guid: c7628a17097de9f4983a5a5206f8f7db, type: 3}
+      weight: 0.7
+      holdSeconds: {x: 20, y: 35}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    - label: hands on hips
+      clip: {fileID: -8496034883718302899, guid: e2b620e273c935a41bdc7abe859fa5bf, type: 3}
+      weight: 0.7
+      holdSeconds: {x: 20, y: 35}
+      speedRange: {x: 0.95, y: 1.05}
+      blendSeconds: 1.5
+    timerOneShots: 0
+    baseSpeedRange: {x: 0.95, y: 1.05}
+    baseStartOffset: -1
+    basePhaseJitter: 0
+    modeBlendSeconds: 0.8
+    oneShotInterval: {x: 20, y: 40}
+    oneShots:
+    - label: throw up hands
+      clip: {fileID: -953282750836581096, guid: 517f808c2138a854bbfa91707f908a6c, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.85, y: 0.92}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.65
+      blendOut: 0.85
+      suppressGaze: 0
+      offerToLlm: 1
+      llmDescription: "throws her hands up \u2014 exasperated, can't believe what
+        she hears, nobody tells her anything"
+    - label: watch check
+      clip: {fileID: 613494369224692196, guid: cbfe41b5932db5542af632c383be9282, type: 3}
+      mask: {fileID: 0}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 0
+      blendIn: 0.5
+      blendOut: 0.6
+      suppressGaze: 1
+      offerToLlm: 1
+      llmDescription: "checks her watch \u2014 impatient, feels kept waiting or that
+        her time is wasted"
+    - label: head shake
+      clip: {fileID: 6927327991618980751, guid: 4fc09776ccd86c94daf0bbaf3e1623e6, type: 3}
+      mask: {fileID: 31900000, guid: 7b4de0f76a4d40bab6606264a9fe1602, type: 2}
+      weight: 1
+      speedRange: {x: 0.95, y: 1.05}
+      startOffset: 0
+      holdSeconds: 1.4
+      blendIn: 0.5
+      blendOut: 0.7
+      suppressGaze: 1
+      offerToLlm: 1
+      llmDescription: "shakes her head \u2014 disagreeing, doubting, or not accepting
+        what she hears"
+    faceAgitationFloor: -1
+    gaze:
+      enabled: 0
+      engageAngle: 15
+      releaseAngle: 35
+      lockDuration: {x: 2.5, y: 6}
+      cooldown: {x: 5, y: 12}
+      lockInRate: 4
+      lockOutRate: 2
+      headRate: 3.5
+      headFollow: 0.6
+      maxHeadYaw: 25
+      maxHeadPitch: 15
+      driveEyes: 1
+    idle:
+      enabled: 1
+      intensity: 0.7
+      stance: 1
+      breathsPerMinute: 14
+      breathVariation: 2
+      chestPitchDegrees: 1.5
+      shoulderRiseDegrees: 0.8
+      swayDegrees: {x: 1.5, y: 1, z: 1}
+      swayFrequency: 0.08
+      shiftInterval: {x: 20, y: 60}
+      shiftRollDegrees: 3.5
+      shiftBlendSeconds: 2
+      shiftLateralCentimetres: 3
+      standingRollScale: 0.25
+      armSwayDegrees: 0.4
+      neckDriftDegrees: 1.5
+      neckDriftFrequency: 0.05
+      faceEnabled: 1
+      faceIntensity: 1
+      restingSmile: 0.15
+      animateBrows: 0
+      driftAmount: 6
+      driftFrequency: 0.06
+      eventInterval: {x: 6, y: 18}
+      eventStrength: 22
+      blinkEnabled: 1
+      blinkInterval: {x: 2.5, y: 5.5}
+      doubleBlinkChance: 0.12
+  clipFaceWeight: 0
+  blendLoopsByMood: 1
+  calmMood: 20
+  agitatedMood: 75
+  moodEaseSeconds: 15
+  minOneShotBlendIn: 0.5
+  minOneShotBlendOut: 0.7
+  settleSeconds: 8
+  loopSpeedDrift: 0.06
+  loopSpeedDriftPeriod: 14
+  blinkInterval: {x: 2.5, y: 5.5}
