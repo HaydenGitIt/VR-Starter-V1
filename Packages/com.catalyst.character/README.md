@@ -64,13 +64,16 @@ Put a **`TalkingCharacterDriver`** on any GameObject in the scene (not inside th
 | `SetInteractive(true)` | She listens and answers through Claude and ElevenLabs, the same way the classroom kids do. |
 | `Say(line)` / `yield return SayAndWait(line)` | Speaks a fixed line with her ElevenLabs voice, in either mode. While it plays nothing the user says is answered. The line is passed to the LLM afterwards so she carries on from it instead of repeating it. |
 | `StopSpeaking()`, `ResetConversation()` | Cut her off; forget the history and the scripted lines. |
+| `EndConversation()` | Same as `SetInteractive(false)`. She stays in the phase and mood the conversation left her in, so the ending follows how the user handled her. |
+| `EndConversation(phase)`, `EndConversationAs("calm" / "transition" / "agitated")` | End and settle her into a phase your own logic picked (body and face), e.g. Calm on success, Agitated on a timeout. The string form is for UnityEvents. |
+| `CurrentPhase`, `CurrentMood` | Where she is now (Calm / Transition / Agitated) and the last reported agitation 0..100 (-1 before the first reply). Read them to judge the outcome. |
 | Events | `onUserSpoke(string)`, `onCharacterReplied(string)`, `onLineFinished`, `onDemoFinished`: hook these up in the inspector or from code. |
 
 The driver switches the prefab's `CharacterSession` auto-begin off in its Awake, so with a driver in the scene the start mode alone decides whether she listens.
 
 ## Runtime flow
 
-`MicrophoneRecorder` (VAD) → `ElevenLabsRealtimeSTT` (Scribe WebSocket) → `CharacterConversation` (Claude, streamed `{reply, mood}` JSON) → `NpcSpeechPlayer` (sentence-by-sentence ElevenLabs TTS, loudness-levelled, queued in order) → the character's AudioSource → `LipSyncAnalyzer` → `VisemeDriver`. `GazeDriver` reads the analyzer's loudness for its speaking rhythm. `CharacterSession` forwards the mood to `AgitationResponder`, which blends the face through ProceduralIdleMotion's held-expression layer and plays a speaking loop over the ambient sequence.
+`MicrophoneRecorder` (VAD) → `ElevenLabsRealtimeSTT` (Scribe WebSocket) → `CharacterConversation` (Claude, streamed `{reply, mood}` JSON) → `NpcSpeechPlayer` (sentence-by-sentence ElevenLabs TTS, loudness-levelled, queued in order) → the character's AudioSource → `LipSyncAnalyzer` → `VisemeDriver`. `GazeDriver` reads the analyzer's loudness for its speaking rhythm. `CharacterSession` forwards the mood to `AgitationResponder`, which blends the face through ProceduralIdleMotion's held-expression layer and plays a speaking loop over the ambient sequence. When the session ends, `AgitationResponder.onScenarioEnd` decides what happens: `KeepCurrent` (default) leaves her in the last reported phase and mood, `SettleIntoEndPhase` always switches to `endPhase` and fades the face back to neutral.
 
 Turn-taking: an utterance that arrives while a reply is in flight is dropped, the mic is muted while the character speaks (NpcSpeechPlayer registers its AudioSource with the recorder), and an optional silence nudge lets the character speak up after N quiet seconds.
 

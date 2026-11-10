@@ -20,6 +20,10 @@ namespace catalyst.xr67
     ///   with the character's ElevenLabs voice, in either mode. Lines are
     ///   remembered and given to the LLM, so she carries on from them.
     ///   <see cref="SetScenarioPrompt"/> — who she is and what the scene is.
+    ///   <see cref="EndConversation()"/> — stop listening; she stays as the
+    ///   conversation left her. <see cref="EndConversation(ConversationPhase)"/>
+    ///   — stop and settle her into a phase chosen by your own logic.
+    ///   <see cref="CurrentPhase"/> / <see cref="CurrentMood"/> — how she feels now.
     ///
     /// Start mode Demo runs: quiet for a few seconds → the opening line →
     /// full conversation.
@@ -78,6 +82,12 @@ namespace catalyst.xr67
         /// <summary>True from <see cref="Say"/> until that line finished playing.</summary>
         public bool IsSayingLine => _lineRoutine != null;
 
+        /// <summary>Where she is emotionally right now (Calm / Transition / Agitated), as the last reply or <see cref="EndConversation(ConversationPhase)"/> left it. Read it to judge how the user did.</summary>
+        public ConversationPhase CurrentPhase => Responder != null ? Responder.CurrentPhase : ConversationPhase.Calm;
+
+        /// <summary>Agitation 0..100 the last reply reported, -1 before the first reply of the conversation.</summary>
+        public int CurrentMood => Responder != null ? Responder.CurrentAgitation : -1;
+
         // Longest wait for ElevenLabs to return the first audio of a line.
         private const float LineStartTimeout = 15f;
 
@@ -88,6 +98,18 @@ namespace catalyst.xr67
         private System.Func<string> _otherAugmenter;
         private Coroutine _lineRoutine;
         private Coroutine _demoRoutine;
+        private AgitationResponder _responder;
+
+        // Looked up on use: CharacterSession may add the responder at runtime.
+        private AgitationResponder Responder
+        {
+            get
+            {
+                if (_responder == null && character != null)
+                    _responder = character.GetComponentInChildren<AgitationResponder>(true);
+                return _responder;
+            }
+        }
 
         // ------------------------------------------------------------------ public API
 
@@ -106,6 +128,39 @@ namespace catalyst.xr67
             else
             {
                 _session.End();
+            }
+        }
+
+        /// <summary>
+        /// Ends the conversation (same as SetInteractive(false)). She stays in
+        /// the phase and mood the conversation left her in, unless her
+        /// AgitationResponder is set to Settle Into End Phase.
+        /// </summary>
+        public void EndConversation()
+        {
+            SetInteractive(false);
+        }
+
+        /// <summary>
+        /// Ends the conversation and settles her into <paramref name="phase"/>,
+        /// body and face, whatever the last reply said. For scene logic that
+        /// scores the outcome itself (e.g. Calm on success, Agitated on a timeout).
+        /// </summary>
+        public void EndConversation(ConversationPhase phase)
+        {
+            SetInteractive(false);
+            if (Responder != null) Responder.SettleInto(phase);
+            else Debug.LogWarning("TalkingCharacterDriver: no AgitationResponder on the character — the end phase has nothing to drive.", this);
+        }
+
+        /// <summary>Inspector / UnityEvent form of <see cref="EndConversation(ConversationPhase)"/>: "calm", "transition" or "agitated". Anything else just ends the conversation.</summary>
+        public void EndConversationAs(string phase)
+        {
+            if (ConversationPhaseUtil.TryParse(phase, out ConversationPhase parsed)) EndConversation(parsed);
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(phase)) Debug.LogWarning($"TalkingCharacterDriver: unknown phase \"{phase}\" — use calm, transition or agitated. Ending without changing her phase.", this);
+                EndConversation();
             }
         }
 

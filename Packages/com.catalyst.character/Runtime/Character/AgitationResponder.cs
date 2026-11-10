@@ -23,7 +23,8 @@ namespace catalyst.xr67
     /// between as a blend. Written through ProceduralIdleMotion's held
     /// expression layer, so the resting smile, drift and micro-events keep
     /// playing on top and the lipsync visemes are untouched. The face holds
-    /// its level between replies and settles back when the scenario ends.
+    /// its level between replies; when the scenario ends it keeps it (On
+    /// Scenario End = Keep Current) or fades back (Settle Into End Phase).
     ///
     /// Timing — the agitation arrives with the end of the LLM stream, the
     /// voice starts a couple of seconds later (TTS), so the loop is normally
@@ -75,7 +76,19 @@ namespace catalyst.xr67
         [Tooltip("Phase the character starts in (from Start, so a scripted opening line already uses it) and returns to when a scenario begins. Only applied when the profile authors at least one phase set.")]
         [SerializeField] private ConversationPhase startPhase = ConversationPhase.Agitated;
 
-        [Tooltip("Phase the character settles into when the scenario ends.")]
+        /// <summary>What the body and face do when the scenario ends.</summary>
+        public enum ScenarioEnd
+        {
+            /// <summary>Stay in the phase and mood the conversation left her in.</summary>
+            KeepCurrent,
+            /// <summary>Settle into End Phase regardless of how the conversation went (the face fades back to neutral).</summary>
+            SettleIntoEndPhase,
+        }
+
+        [Tooltip("When the scenario ends: Keep Current = she stays in the phase and mood the last reply reported, so the ending follows how the user handled her. Settle Into End Phase = always switch to End Phase. Scene logic can still pick the ending with SettleInto (TalkingCharacterDriver.EndConversation).")]
+        [SerializeField] private ScenarioEnd onScenarioEnd = ScenarioEnd.KeepCurrent;
+
+        [Tooltip("Phase the character settles into when the scenario ends. Only used when On Scenario End is Settle Into End Phase.")]
         [SerializeField] private ConversationPhase endPhase = ConversationPhase.Calm;
 
         [Tooltip("When the LLM picks a one-shot for a reply (the reply's \"gesture\" field), play it as the character speaks that reply.")]
@@ -271,25 +284,66 @@ namespace catalyst.xr67
             _pendingGesture = null;
             _repliesSinceGesture = int.MaxValue / 2;
             _lastGestureTime = -1000f;
-            _faceLevel = restingAgitation / 100f;
-            _faceVelocity = 0f;
+            // A face still held from the previous run eases to the resting
+            // level instead of snapping there.
+            if (_facePresence <= 0f)
+            {
+                _faceLevel = restingAgitation / 100f;
+                _faceVelocity = 0f;
+            }
             StopLoop();
             if (PhasesAuthored) ApplyPhase(startPhase, "scenario begins");
             Log($"scenario begins — {CountBands(moods)} agitation band(s), face {(driveFaceForScenario && driveFace ? "on" : "off")}");
         }
 
-        /// <summary>The scenario ended: loops off, face released. Called by ScenarioLogic on stop.</summary>
+        /// <summary>
+        /// The scenario ended: speaking loops and pending gestures off. With
+        /// On Scenario End = Keep Current the body stays in its phase and the
+        /// face keeps the last reported mood; with Settle Into End Phase the
+        /// body switches to End Phase and the face fades back to neutral.
+        /// Called by CharacterSession.End.
+        /// </summary>
         public void EndScenario()
         {
             _moods = null;
-            _scenarioDrivesFace = false;
             _replyPending = false;
             _gestureAwaitsReply = false;
             _gestureAt = -1f;
             _pendingGesture = null;
             StopLoop();
-            // The face fades out in LateUpdate (Face Fade Seconds) rather than snapping off.
-            if (PhasesAuthored) ApplyPhase(endPhase, "scenario ends");
+
+            if (onScenarioEnd == ScenarioEnd.SettleIntoEndPhase)
+            {
+                // The face fades out in LateUpdate (Face Fade Seconds) rather than snapping off.
+                _scenarioDrivesFace = false;
+                if (PhasesAuthored) ApplyPhase(endPhase, "scenario ends");
+                return;
+            }
+
+            // Keep Current: the face stays driven at the last agitation and
+            // the body keeps its phase, so the ending is what the user made it.
+            Flow("scenario_end",
+                $"scenario ends — keeping phase \"{PhaseWord(_phase)}\" and agitation {(_agitation >= 0 ? _agitation.ToString() : "none reported")} (On Scenario End = Keep Current).",
+                "phase", PhaseWord(_phase), "agitation", _agitation >= 0 ? (object)_agitation : null);
+        }
+
+        /// <summary>
+        /// Scene logic decides how the character ends up: the body crossfades
+        /// into <paramref name="phase"/> and the face and mood-blended loops
+        /// ease to a mood that sits squarely in it. Works during or after a
+        /// scenario. Call after the session ended (TalkingCharacterDriver.EndConversation
+        /// does), or the next reply's phase replaces it.
+        /// </summary>
+        public void SettleInto(ConversationPhase phase)
+        {
+            StudentBehaviourProfile p = ambientPlayer != null ? ambientPlayer.profile : null;
+            int mood = p != null
+                ? Mathf.Clamp(Mathf.RoundToInt(p.MoodFor(phase)), 0, 100)
+                : phase == ConversationPhase.Calm ? 10 : phase == ConversationPhase.Transition ? 45 : 85;
+            _agitation = mood;
+            if (ambientPlayer != null) ambientPlayer.SetMood(mood);
+            _gestureAwaitsReply = false;
+            if (PhasesAuthored) ApplyPhase(phase, "scene logic");
         }
 
         /// <summary>The one-shots the LLM may pick for this character (its profile's phase sets), empty when none.</summary>
